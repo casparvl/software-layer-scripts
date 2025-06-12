@@ -51,8 +51,6 @@ jobs:
               fi
 
               # Compare the hooks to what is shipped in the repository
-              # (it is overkill, but harmless, to do this for every architecture)
-              export EESSI_SOFTWARE_SUBDIR_OVERRIDE=${{matrix.EESSI_SOFTWARE_SUBDIR_OVERRIDE}}
               source /cvmfs/software.eessi.io/versions/${EESSI_VERSION}/init/bash
               module load EESSI-extend
               diff "$TEMP_FILE" "$EASYBUILD_HOOKS"
