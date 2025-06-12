@@ -1,5 +1,0 @@
-# 2024.06.12
-# Rebuild required because EasyBuild configuration was updated to filter ParMETIS dependency
-# see https://github.com/EESSI/software-layer-scripts/pull/2
-easyconfigs:
-  - EESSI-extend-easybuild.eb
