@@ -9,7 +9,7 @@ fi
 
 version=$1
 
-SOFTWARE_LAYER_TARBALL_URL="https://github.com/EESSI/software-layer/tarball/${version}-software.eessi.io"
+SOFTWARE_LAYER_SCRIPTS_TARBALL_URL="https://github.com/EESSI/software-layer-scripts/tarball/main"
 
 TOPDIR=$(dirname $(realpath $0))
 
@@ -26,7 +26,7 @@ fi
 tartmp=$(mktemp -t -d init.XXXXX)
 mkdir "${tartmp}/${version}"
 tarname="eessi-${version}-init-$(date +%s).tar.gz"
-curl -Ls ${SOFTWARE_LAYER_TARBALL_URL} | tar xzf - -C "${tartmp}/${version}" --strip-components=1 --no-wildcards-match-slash --wildcards '*/init/'
+curl -Ls ${SOFTWARE_LAYER_SCRIPTS_TARBALL_URL} | tar xzf - -C "${tartmp}/${version}" --strip-components=1 --no-wildcards-match-slash --wildcards '*/init/'
 source "${tartmp}/${version}/init/minimal_eessi_env"
 if [ "${EESSI_VERSION}" != "${version}" ]
 then
@@ -42,7 +42,7 @@ echo_green "Done! Created tarball ${tarname}."
 tartmp=$(mktemp -t -d scripts.XXXXX)
 mkdir "${tartmp}/${version}"
 tarname="eessi-${version}-scripts-$(date +%s).tar.gz"
-curl -Ls ${SOFTWARE_LAYER_TARBALL_URL} | tar xzf - -C "${tartmp}/${version}" --strip-components=1 --no-wildcards-match-slash --wildcards '*/scripts/'
+curl -Ls ${SOFTWARE_LAYER_SCRIPTS_TARBALL_URL} | tar xzf - -C "${tartmp}/${version}" --strip-components=1 --no-wildcards-match-slash --wildcards '*/scripts/'
 tar czf "${tarname}" -C "${tartmp}" "${version}"
 rm -rf "${tartmp}"
 
