@@ -249,7 +249,7 @@ export PR_DIFF="$PWD/$pr_diff"
 
 # Only run install_scripts.sh if not in dev.eessi.io for security
 if [[ -z ${EESSI_DEV_PROJECT} ]]; then
-    ${TOPDIR}/install_scripts.sh --prefix ${EESSI_PREFIX}
+    ${TOPDIR}/install_scripts.sh --prefix ${EESSI_PREFIX} --eessi-version ${EESSI_VERSION}
 fi
 
 echo ">> Configuring EasyBuild..."
