@@ -359,7 +359,7 @@ else
     for easystack_file in ${rebuild_easystacks} ${new_easystacks}; do
 
         # make sure that easystack file being picked up is for EESSI version that we're building for...
-        echo "${easystack_file}" | grep -q "^easystacks/${EESSI_VERSION}/"
+        echo "${easystack_file}" | grep -q "^easystacks/software.eessi.io/${EESSI_VERSION}/"
         if [ $? -ne 0 ]; then
             fatal_error "Easystack file ${easystack_file} is not intended for EESSI version ${EESSI_VERSION}, giving up!"
         fi
