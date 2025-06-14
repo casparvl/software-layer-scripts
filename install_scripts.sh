@@ -49,8 +49,12 @@ compare_and_copy() {
     if [ ! -f "$destination_file" ] || ! diff -q "$source_file" "$destination_file" ; then
         echo "Files $source_file and $destination_file differ, checking if we should copy or not"
         # We only copy if the file is part of the PR
-        if file_changed_in_pr "$source_file"; then
-          echo "File has changed in the PR"
+        if [ ! -f "${destination_file}" ] || file_changed_in_pr "$source_file"; then
+          if [ ! -f "${destination_file}" ]; then
+            echo "File has not been copied yet ($destination_file does not exist}"
+          else
+            echo "File has changed in the PR"
+          fi
           cp "$source_file" "$destination_file"
           echo "File $source_file copied to $destination_file"
         else
