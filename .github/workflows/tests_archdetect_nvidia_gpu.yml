@@ -17,6 +17,9 @@ jobs:
           - 2xa100 # cc80, supported with (atleast) zen2 CPU
           - 4xa100 # cc80, supported with (atleast) zen2 CPU
           - cc01 # non-existing GPU
+        EESSI_VERSION:
+          - '2023.06'
+          - '2025.06'
       fail-fast: false
     steps:
     - name: checkout
@@ -30,6 +33,10 @@ jobs:
           cvmfs_config_package: https://github.com/EESSI/filesystem-layer/releases/download/latest/cvmfs-config-eessi_latest_all.deb
           cvmfs_http_proxy: DIRECT
           cvmfs_repositories: software.eessi.io
+
+    - name: Fix EESSI version in init scripts
+      run: |
+        sed -i "s/__EESSI_VERSION_DEFAULT__/${{matrix.EESSI_VERSION}}/g" init/eessi_defaults
 
     - name: test accelerator detection
       run: |
