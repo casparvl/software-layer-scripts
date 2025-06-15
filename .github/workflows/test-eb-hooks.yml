@@ -6,11 +6,14 @@ on:
   workflow_dispatch:
 permissions:
   contents: read # to fetch code (actions/checkout)
-env:
-  EESSI_VERSION: '2023.06'
 jobs:
   check_eb_hooks:
     runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        EESSI_VERSION:
+          - '2023.06'
+          - '2025.06'
     steps:
         - name: Check out software-layer repository
           uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
@@ -50,7 +53,10 @@ jobs:
                 git show origin/${{ github.base_ref }}:$FILE > "$TEMP_FILE"
               fi
 
+              # replace <EESSI_VERSION> placeholder (as is also done in install_scripts.sh)
+              sed -i "s/<EESSI_VERSION>/${{matrix.EESSI_VERSION}}/g" "${TEMP_FILE}"
+
               # Compare the hooks to what is shipped in the repository
-              source /cvmfs/software.eessi.io/versions/${EESSI_VERSION}/init/bash
+              source /cvmfs/software.eessi.io/versions/${{matrix.EESSI_VERSION}}/init/bash
               module load EESSI-extend
               diff "$TEMP_FILE" "$EASYBUILD_HOOKS"
