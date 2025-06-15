@@ -187,3 +187,21 @@ hook_files=(
     eb_hooks.py
 )
 copy_files_by_list ${TOPDIR} ${INSTALL_PREFIX}/init/easybuild "${hook_files[@]}"
+
+# replace version placeholders in scripts;
+# note: the commands below are always run, regardless of whether the scripts were changed,
+# but that should be fine (no changes are made if version placeholder is not present anymore)
+
+# make sure that scripts in init/ and scripts/ use correct EESSI version
+sed -i "s/__EESSI_VERSION_DEFAULT__/${EESSI_VERSION}/g" ${INSTALL_PREFIX}/init/eessi_defaults
+
+# replace placeholder for default EESSI version in Lmod init scripts
+for shell in $(ls ${INSTALL_PREFIX}/init/lmod); do
+    sed -i "s/__EESSI_VERSION_DEFAULT__/${EESSI_VERSION}/g" ${INSTALL_PREFIX}/init/lmod/${shell}
+done
+
+# replace EESSI version used in comments in EESSI module
+sed -i "s@/<EESSI_VERSION>/@/${EESSI_VERSION}/@g" ${INSTALL_PREFIX}/init/modules/EESSI/${EESSI_VERSION}.lua
+
+# replace EESSI version used in EasyBuild hooks
+sed -i "s@/<EESSI_VERSION>/@/${EESSI_VERSION}/@g" ${INSTALL_PREFIX}/init/easybuild/eb_hooks.py
