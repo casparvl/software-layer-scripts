@@ -27,6 +27,10 @@ jobs:
           cvmfs_config_package: https://github.com/EESSI/filesystem-layer/releases/download/latest/cvmfs-config-eessi_latest_all.deb
           cvmfs_http_proxy: DIRECT
           cvmfs_repositories: software.eessi.io
+
+      - name: Fix EESSI version in init scripts
+        run: |
+          sed -i "s/__EESSI_VERSION_DEFAULT__/${{matrix.EESSI_VERSION}}/g" init/eessi_defaults
          
       - name: Clone assert.sh script
         run: git clone https://github.com/lehmannro/assert.sh.git
