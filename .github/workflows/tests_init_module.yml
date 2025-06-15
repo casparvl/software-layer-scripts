@@ -28,9 +28,11 @@ jobs:
           cvmfs_http_proxy: DIRECT
           cvmfs_repositories: software.eessi.io
 
-      - name: Fix EESSI version in init scripts
+      - name: Fix EESSI version in lmod init scripts
         run: |
-          sed -i "s/__EESSI_VERSION_DEFAULT__/${{matrix.EESSI_VERSION}}/g" init/eessi_defaults
+          for shell in $(ls init/lmod); do
+            sed -i "s/__EESSI_VERSION_DEFAULT__/${{matrix.EESSI_VERSION}}/g" init/lmod/${shell}
+          done
          
       - name: Clone assert.sh script
         run: git clone https://github.com/lehmannro/assert.sh.git
