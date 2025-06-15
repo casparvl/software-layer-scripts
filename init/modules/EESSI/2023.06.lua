@@ -21,6 +21,7 @@ if (subprocess("uname -m"):gsub("\n$","") == "riscv64") then
 end
 local eessi_prefix = pathJoin(eessi_repo, "versions", eessi_version)
 local eessi_os_type = "linux"
+setenv("EESSI_VERSION_DEFAULT", eessi_version)
 setenv("EESSI_VERSION", eessi_version)
 setenv("EESSI_CVMFS_REPO", eessi_repo)
 setenv("EESSI_OS_TYPE", eessi_os_type)
