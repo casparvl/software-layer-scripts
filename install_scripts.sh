@@ -184,6 +184,9 @@ hook_files=(
 )
 copy_files_by_list ${TOPDIR} ${INSTALL_PREFIX}/init/easybuild "${hook_files[@]}"
 
+# replace version placeholders in scripts;
+# note: the commands below are always run, regardless of whether the scripts were changed,
+# but that should be fine (no changes are made if version placeholder is not present anymore)
 
 # make sure that scripts in init/ and scripts/ use correct EESSI version
 sed -i "s/__EESSI_VERSION_DEFAULT__/${EESSI_VERSION}/g" ${INSTALL_PREFIX}/init/eessi_defaults
