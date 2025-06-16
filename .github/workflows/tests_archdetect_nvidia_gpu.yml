@@ -17,6 +17,8 @@ jobs:
           - 2xa100 # cc80, supported with (atleast) zen2 CPU
           - 4xa100 # cc80, supported with (atleast) zen2 CPU
           - cc01 # non-existing GPU
+        EESSI_VERSION:
+          - '2023.06'
       fail-fast: false
     steps:
     - name: checkout
@@ -30,6 +32,10 @@ jobs:
           cvmfs_config_package: https://github.com/EESSI/filesystem-layer/releases/download/latest/cvmfs-config-eessi_latest_all.deb
           cvmfs_http_proxy: DIRECT
           cvmfs_repositories: software.eessi.io
+
+    - name: Fix EESSI version in init scripts
+      run: |
+        sed -i "s/__EESSI_VERSION_DEFAULT__/${{matrix.EESSI_VERSION}}/g" init/eessi_defaults
 
     - name: test accelerator detection
       run: |
@@ -68,7 +74,7 @@ jobs:
                   match=$(grep "${pattern}" init.out || true)
                   test "x${match}" = "x" || (echo "unexpected match found for '${pattern}' in init output" && exit 1)
 
-                  pattern="Prepending /cvmfs/software.eessi.io/versions/2023.06/software/linux/.*/accel/.*/modules/all to \$MODULEPATH"
+                  pattern="Prepending /cvmfs/software.eessi.io/versions/${{matrix.EESSI_VERSION}}/software/linux/.*/accel/.*/modules/all to \$MODULEPATH"
                   echo ">>> checking for lack of pattern '${pattern}' in init output..."
                   match=$(grep "${pattern}" init.out || true)
                   test "x${match}" = "x" || (echo "unexpected match found for '${pattern}' in init output" && exit 1)
@@ -79,7 +85,7 @@ jobs:
                   echo ">>> checking for pattern '${pattern}' in init output..."
                   grep "${pattern}" init.out || (echo "FAILED 1" || exit 1)
 
-                  pattern="Prepending /cvmfs/software.eessi.io/versions/2023.06/software/linux/.*/accel/.*/modules/all to \$MODULEPATH"
+                  pattern="Prepending /cvmfs/software.eessi.io/versions/${{matrix.EESSI_VERSION}}/software/linux/.*/accel/.*/modules/all to \$MODULEPATH"
                   echo ">>> checking for lack of pattern '${pattern}' in init output..."
                   match=$(grep "${pattern}" init.out || true)
                   test "x${match}" = "x" || (echo "unexpected match found for '${pattern}' in init output" && exit 1)
@@ -87,11 +93,11 @@ jobs:
               else
                   echo ">>> checking for 'accel/nvidia/cc80' in init output..."
                   grep "archdetect found supported accelerator for CPU target x86_64/amd/zen2: accel/nvidia/cc80" init.out || (echo "FAILED 2" && exit 1)
-                  grep "Prepending /cvmfs/software.eessi.io/versions/2023.06/software/linux/x86_64/amd/zen2/accel/nvidia/cc80/modules/all to \$MODULEPATH" init.out || (echo "FAILED 3" && exit 1)
+                  grep "Prepending /cvmfs/software.eessi.io/versions/${{matrix.EESSI_VERSION}}/software/linux/x86_64/amd/zen2/accel/nvidia/cc80/modules/all to \$MODULEPATH" init.out || (echo "FAILED 3" && exit 1)
               fi
 
               echo ">>> checking last line of init output..."
-              tail -1 init.out | grep "Environment set up to use EESSI (2023.06), have fun!" || (echo "FAILED, full init utput:" && cat init.out && exit 1)
+              tail -1 init.out | grep "Environment set up to use EESSI (${{matrix.EESSI_VERSION}}), have fun!" || (echo "FAILED, full init utput:" && cat init.out && exit 1)
 
               echo "All checks on init output PASSED"
           else
@@ -118,7 +124,7 @@ jobs:
           echo ">>> checking for 'accel/nvidia/cc80' in init output..."
           grep "archdetect found supported accelerator for CPU target x86_64/amd/zen3: accel/nvidia/cc80" init.out || (echo "FAILED 1" && exit 1)
           grep "Using x86_64/amd/zen2 as software subdirectory" init.out || (echo "FAILED 2" && exit 1)
-          grep "Prepending /cvmfs/software.eessi.io/versions/2023.06/software/linux/x86_64/amd/zen2/modules/all to \$MODULEPATH" init.out || (echo "FAILED 3" && exit 1)
-          grep "Prepending /cvmfs/software.eessi.io/versions/2023.06/software/linux/x86_64/amd/zen3/accel/nvidia/cc80/modules/all to \$MODULEPATH" init.out || (echo "FAILED 4" && exit 1)
+          grep "Prepending /cvmfs/software.eessi.io/versions/${{matrix.EESSI_VERSION}}/software/linux/x86_64/amd/zen2/modules/all to \$MODULEPATH" init.out || (echo "FAILED 3" && exit 1)
+          grep "Prepending /cvmfs/software.eessi.io/versions/${{matrix.EESSI_VERSION}}/software/linux/x86_64/amd/zen3/accel/nvidia/cc80/modules/all to \$MODULEPATH" init.out || (echo "FAILED 4" && exit 1)
 
           echo "All checks on init output PASSED"

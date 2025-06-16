@@ -358,6 +358,12 @@ else
     new_easystacks=$(echo "${changed_easystacks}" | (grep -v "/rebuilds/" || true))
     for easystack_file in ${rebuild_easystacks} ${new_easystacks}; do
 
+        # make sure that easystack file being picked up is for EESSI version that we're building for...
+        echo "${easystack_file}" | grep -q "^easystacks/$(basename ${EESSI_CVMFS_REPO})/${EESSI_VERSION}/"
+        if [ $? -ne 0 ]; then
+            fatal_error "Easystack file ${easystack_file} is not intended for EESSI version ${EESSI_VERSION}, giving up!"
+        fi
+
         echo -e "Processing easystack file ${easystack_file}...\n\n"
 
         # determine version of EasyBuild module to load based on EasyBuild version included in name of easystack file
