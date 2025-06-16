@@ -134,6 +134,9 @@ init_files=(
     minimal_eessi_env README.md test.py lmod_eessi_archdetect_wrapper.sh lmod_eessi_archdetect_wrapper_accel.sh
 
 )
+# make sure that scripts in init/ and scripts/ use correct EESSI version
+sed -i "s/__EESSI_VERSION_DEFAULT__/${EESSI_VERSION}/g" ${TOPDIR}/init/eessi_defaults
+
 copy_files_by_list ${TOPDIR}/init ${INSTALL_PREFIX}/init "${init_files[@]}"
 
 # Copy for the init/arch_specs directory
@@ -152,12 +155,16 @@ copy_files_by_list ${TOPDIR}/init/Magic_Castle ${INSTALL_PREFIX}/init/Magic_Cast
 mc_files=(
    2023.06.lua
 )
+# replace EESSI version used in comments in EESSI module
+sed -i "s@/<EESSI_VERSION>/@/${EESSI_VERSION}/@g" ${TOPDIR}/init/modules/EESSI/${EESSI_VERSION}.lua
 copy_files_by_list ${TOPDIR}/init/modules/EESSI ${INSTALL_PREFIX}/init/modules/EESSI "${mc_files[@]}"
 
 # Copy for init/lmod directory
-init_script_files=(
-    bash zsh ksh fish csh    
-)
+init_script_files=$(ls ${TOPDIR}/init/lmod)
+# replace placeholder for default EESSI version in Lmod init scripts
+for shell in $init_script_files; do
+    sed -i "s/__EESSI_VERSION_DEFAULT__/${EESSI_VERSION}/g" ${TOPDIR}/init/lmod/${shell}
+done
 copy_files_by_list ${TOPDIR}/init/lmod ${INSTALL_PREFIX}/init/lmod "${init_script_files[@]}"
 
 # Copy for the scripts directory
@@ -186,22 +193,6 @@ ${INSTALL_PREFIX}/scripts/gpu_support/nvidia/easystacks "${host_injections_easys
 hook_files=(
     eb_hooks.py
 )
-copy_files_by_list ${TOPDIR} ${INSTALL_PREFIX}/init/easybuild "${hook_files[@]}"
-
-# replace version placeholders in scripts;
-# note: the commands below are always run, regardless of whether the scripts were changed,
-# but that should be fine (no changes are made if version placeholder is not present anymore)
-
-# make sure that scripts in init/ and scripts/ use correct EESSI version
-sed -i "s/__EESSI_VERSION_DEFAULT__/${EESSI_VERSION}/g" ${INSTALL_PREFIX}/init/eessi_defaults
-
-# replace placeholder for default EESSI version in Lmod init scripts
-for shell in $(ls ${INSTALL_PREFIX}/init/lmod); do
-    sed -i "s/__EESSI_VERSION_DEFAULT__/${EESSI_VERSION}/g" ${INSTALL_PREFIX}/init/lmod/${shell}
-done
-
-# replace EESSI version used in comments in EESSI module
-sed -i "s@/<EESSI_VERSION>/@/${EESSI_VERSION}/@g" ${INSTALL_PREFIX}/init/modules/EESSI/${EESSI_VERSION}.lua
-
 # replace EESSI version used in EasyBuild hooks
-sed -i "s@/eessi-<EESSI_VERSION>/@/eessi-${EESSI_VERSION}/@g" ${INSTALL_PREFIX}/init/easybuild/eb_hooks.py
+sed -i "s@/eessi-<EESSI_VERSION>/@/eessi-${EESSI_VERSION}/@g" ${TOPDIR}/eb_hooks.py
+copy_files_by_list ${TOPDIR} ${INSTALL_PREFIX}/init/easybuild "${hook_files[@]}"
