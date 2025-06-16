@@ -54,7 +54,7 @@ sed_update_if_changed() {
         return 1
     }
 
-    if ! cmp -s "$file" "$tmp_file"; then
+    if ! diff -q "$file" "$tmp_file" > /dev/null; then
         mv "$tmp_file" "$file"
     else
         rm -f "$tmp_file"
