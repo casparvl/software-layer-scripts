@@ -151,12 +151,13 @@ EESSI_REPOS_CFG_DIR_OVERRIDE=$(cfg_get_value "repository" "repos_cfg_dir")
 export EESSI_REPOS_CFG_DIR_OVERRIDE=${EESSI_REPOS_CFG_DIR_OVERRIDE:-${PWD}/cfg}
 echo "bot/test.sh: EESSI_REPOS_CFG_DIR_OVERRIDE='${EESSI_REPOS_CFG_DIR_OVERRIDE}'"
 
-# determine pilot version to be used from .repository.repo_version in ${JOB_CFG_FILE}
-# here, just set & export EESSI_PILOT_VERSION_OVERRIDE
+# determine EESSI version to be used from .repository.repo_version in ${JOB_CFG_FILE}
+# here, just set & export EESSI_VERSION_OVERRIDE
 # next script (eessi_container.sh) makes use of it via sourcing init scripts
 # (e.g., init/eessi_defaults or init/minimal_eessi_env)
-export EESSI_PILOT_VERSION_OVERRIDE=$(cfg_get_value "repository" "repo_version")
-echo "bot/test.sh: EESSI_PILOT_VERSION_OVERRIDE='${EESSI_PILOT_VERSION_OVERRIDE}'"
+REPOSITORY_VERSION=$(cfg_get_value "repository" "repo_version")
+export EESSI_VERSION_OVERRIDE=${REPOSITORY_VERSION}
+echo "bot/build.sh: EESSI_VERSION_OVERRIDE='${EESSI_VERSION_OVERRIDE}'"
 
 # determine CVMFS repo to be used from .repository.repo_name in ${JOB_CFG_FILE}
 # here, just set EESSI_CVMFS_REPO_OVERRIDE, a bit further down
