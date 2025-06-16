@@ -228,4 +228,4 @@ done
 sed_update_if_changed "s@/<EESSI_VERSION>/@/${EESSI_VERSION}/@g" ${INSTALL_PREFIX}/init/modules/EESSI/${EESSI_VERSION}.lua
 
 # replace EESSI version used in EasyBuild hooks
-sed_update_if_changed "s@/<EESSI_VERSION>/@/${EESSI_VERSION}/@g" ${INSTALL_PREFIX}/init/easybuild/eb_hooks.py
+sed_update_if_changed "s@/eessi-<EESSI_VERSION>/@/eessi-${EESSI_VERSION}/@g" ${INSTALL_PREFIX}/init/easybuild/eb_hooks.py
