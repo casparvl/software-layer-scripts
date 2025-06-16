@@ -136,7 +136,6 @@ init_files=(
 )
 # make sure that scripts in init/ and scripts/ use correct EESSI version
 sed -i "s/__EESSI_VERSION_DEFAULT__/${EESSI_VERSION}/g" ${TOPDIR}/init/eessi_defaults
-
 copy_files_by_list ${TOPDIR}/init ${INSTALL_PREFIX}/init "${init_files[@]}"
 
 # Copy for the init/arch_specs directory
