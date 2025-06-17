@@ -64,7 +64,7 @@ jobs:
           # set up environment to have utility functions in place that load_easybuild_module.sh script relies on,
           # along with $EESSI_* environment variables, and Lmod
           echo 'ls -l /software-layer-scripts/' >> ${test_script}
-          echo 'sed -i "s/__EESSI_VERSION_DEFAULT__/${{matrix.EESSI_VERSION}}/g" init/eessi_defaults
+          echo 'sed -i "s/__EESSI_VERSION_DEFAULT__/${{matrix.EESSI_VERSION}}/g" init/eessi_defaults' >> ${test_script}
           echo 'source /software-layer-scripts/scripts/utils.sh' >> ${test_script}
           echo 'source /software-layer-scripts/init/eessi_environment_variables' >> ${test_script}
           echo 'source ${EPREFIX}/usr/share/Lmod/init/bash' >> ${test_script}
