@@ -13,7 +13,7 @@ jobs:
       fail-fast: false
       matrix:
         EESSI_VERSION:
-          - 2023.06
+          - '2023.06'
     steps:
       - name: Check out software-layer repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
@@ -68,7 +68,7 @@ jobs:
       fail-fast: false
       matrix:
         EESSI_VERSION:
-          - 2023.06
+          - '2023.06'
         EESSI_SOFTWARE_SUBDIR_OVERRIDE:
           - x86_64/amd/zen3
           - x86_64/amd/zen4
@@ -84,6 +84,10 @@ jobs:
           cvmfs_config_package: https://github.com/EESSI/filesystem-layer/releases/download/latest/cvmfs-config-eessi_latest_all.deb
           cvmfs_http_proxy: DIRECT
           cvmfs_repositories: software.eessi.io
+
+      - name: Fix EESSI version in init scripts
+        run: |
+          sed -i "s/__EESSI_VERSION_DEFAULT__/${{matrix.EESSI_VERSION}}/g" init/eessi_defaults
               
       - name: Test for expected variables match between Lmod init script and original bash script
         run: |
@@ -141,7 +145,7 @@ jobs:
       fail-fast: false
       matrix:
         EESSI_VERSION:
-          - 2023.06
+          - '2023.06'
         EESSI_SOFTWARE_SUBDIR_OVERRIDE:
           - none
           - x86_64/amd/zen2
