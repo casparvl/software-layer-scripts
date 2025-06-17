@@ -22,6 +22,7 @@ jobs:
         uses: eessi/github-action-eessi@v3
         with:
           eessi_stack_version: ${{matrix.EESSI_VERSION}}
+          use_eessi_module: true
 
       - name: Install the EESSI-extend shipped with the repository
         run: |
