@@ -139,6 +139,7 @@ jobs:
               # test use of --overlay-tool unionfs
               elif [[ ${{matrix.SCRIPT_TEST}} == 'unionfs' ]]; then
                 container="docker://ghcr.io/eessi/build-node:debian12"
+                export SINGULARITY_BIND="$PWD:/test"
                 echo 'ls -ld /cvmfs*/software.eessi.io/*' > test_script.sh
                 chmod u+x test_script.sh
                 ./eessi_container.sh --verbose --container ${container} --access rw --overlay-tool unionfs --mode run /test/test_script.sh 2>&1 | tee ${outfile}
