@@ -143,8 +143,9 @@ jobs:
                 echo 'ls -ld /cvmfs*/software.eessi.io/*' > test_script.sh
                 chmod u+x test_script.sh
                 ./eessi_container.sh --verbose --container ${container} --access rw --overlay-tool unionfs --mode run /test/test_script.sh 2>&1 | tee ${outfile}
-                grep "/cvmfs/software.eessi.io/versions" $outfile
-                grep "/cvmfs_ro/software.eessi.io/versions" $outfile
+                for pattern in "/cvmfs/software.eessi.io/versions" "/cvmfs_ro/software.eessi.io/versions"; do
+                  grep "${pattern}" $outfile || (echo "Pattern '${pattern}' not found in $outfile"; exit 1)
+                done
 
               else
                   echo "Unknown test case: ${{matrix.SCRIPT_TEST}}" >&2
