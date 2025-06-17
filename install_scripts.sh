@@ -57,9 +57,9 @@ sed_update_if_changed() {
     if ! diff -q "$file" "$tmp_file" > /dev/null; then
         # Use cat to retain existing permissions, set umask to world readable in case the target file does not yet exist. 
         (umask 022 && cat "$tmp_file" > "$file")
-    else
-        rm -f "$tmp_file"
     fi
+    # Remove the temporary file
+    rm -f "$tmp_file"
 }
 
 compare_and_copy() {
