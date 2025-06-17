@@ -26,6 +26,11 @@ jobs:
 
       - name: Install the EESSI-extend shipped with the repository
         run: |
+          # Define a function to check the values of environment variables
+          # and another that checks an environment does not contain environment 
+          # variables matching a certain pattern
+          source .github/workflows/scripts/test_utils.sh
+
           # Let's start from a clean slate (unload the EESSI module)
           module purge
           check_disallowed_env_prefix EESSI_
