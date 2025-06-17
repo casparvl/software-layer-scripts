@@ -405,7 +405,7 @@ def parse_hook_zen4_module_only(ec, eprefix):
         env_varname = EESSI_IGNORE_ZEN4_GCC1220_ENVVAR
         # TODO: create a docs page to which we can refer for more info here
         # TODO: then update the link to the known issues page to the _specific_ issue
-        # Need to escape newline character so that the newline character actually ends up in the module file
+        # Need to escape the newline character so that the newline character actually ends up in the module file
         # (otherwise, it splits the string, and a 2-line string ends up in the modulefile, resulting in syntax error)
         errmsg = "EasyConfigs using toolchains based on GCCcore-12.2.0 are not supported for the Zen4 architecture.\\n"
         errmsg += "See https://www.eessi.io/docs/known_issues/eessi-<EESSI_VERSION>/#gcc-1220-and-foss-2022b-based-modules-cannot-be-loaded-on-zen4-architecture"
