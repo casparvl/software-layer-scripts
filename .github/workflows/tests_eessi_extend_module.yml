@@ -1,0 +1,70 @@
+# documentation: https://help.github.com/en/articles/workflow-syntax-for-github-actions
+name: Tests for EESSI-extend module functionality in software.eessi.io
+on:
+  push:
+    branches: [ "*-software.eessi.io" ]
+  pull_request:
+permissions:
+  contents: read # to fetch code (actions/checkout)
+jobs:
+  basic_checks:
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        EESSI_VERSION:
+          - '2023.06'
+    steps:
+      - name: Check out software-layer repository
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+          
+      - name: Mount EESSI CernVM-FS repository
+        uses: eessi/github-action-eessi@v3
+        with:
+          eessi_stack_version: ${{matrix.EESSI_VERSION}}
+
+      - name: Install the EESSI-extend shipped with the repository
+        run: |
+          # EESSI is already available
+          module load EasyBuild
+          # Set an installation path
+          export MY_INSTALLATION_PATH=/tmp/easybuild
+          export EASYBUILD_PREFIX=$MY_INSTALLATION_PATH
+          eb EESSI-extend-easybuild.eb --rebuild
+          # Verify that we can pick the installed version up
+          module use $MY_INSTALLATION_PATH/modules/all
+          module load EESSI-extend/${{matrix.EESSI_VERSION}}-easybuild
+          echo $EBROOTEESSIMINEXTEND | grep $MY_INSTALLATION_PATH || { echo "ERROR: Installed version of EESSI-extend not picked up (loaded $EBROOTEESSIMINEXTEND)" >&2; exit 1; }
+          module unload EESSI-extend
+          module unuse $MY_INSTALLATION_PATH/modules/all
+          unset EASYBUILD_PREFIX
+    
+      - name: Run tests for EESSI-extend in the various scenarios
+        run: |
+          export MY_INSTALLATION_PATH=/tmp/easybuild
+
+          # Define a function to check the values of environment variables
+          # and another that checks an environment does not contain environment 
+          # variables matching a certain pattern
+          source .github/workflows/scripts/test_utils.sh
+
+          # Let's start from a clean slate
+          module purge
+          check_disallowed_env_prefix EESSI_
+          check_disallowed_env_prefix EASYBUILD_
+
+          # Load the EESSI module
+          module load EESSI/${{matrix.EESSI_VERSION}}
+          check_disallowed_env_prefix EASYBUILD_
+          # Access the installed EESSI-extend
+          module use /tmp/easybuild/modules/all
+
+          # Configure for CVMFS install
+          export EESSI_CVMFS_INSTALL=1
+          module load EESSI-extend/${{matrix.EESSI_VERSION}}-easybuild
+          # check some common ones
+          check_env_var "EASYBUILD_READ_ONLY_INSTALLDIR" "1"
+          check_env_var "EASYBUILD_ALLOW_LOADED_MODULES" "EasyBuild,EESSI-extend"
+          check_env_var "EASYBUILD_SYSROOT" "$EESSI_EPREFIX"
+          # check some specific ones
+          check_env_var "EASYBUILD_INSTALLPATH" "$EESSI_SOFTWARE_PATH"
