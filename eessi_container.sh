@@ -813,7 +813,7 @@ do
                 EESSI_READONLY_OVERLAY="container:unionfs"
                 # cow stands for 'copy-on-write'
                 EESSI_READONLY_OVERLAY+=" -o cow"
-                EESSI_READONLY_OVERLAY+=" /cvmfs_ro/software.eessi.io=RO"
+                EESSI_READONLY_OVERLAY+=" /cvmfs_ro/${cvmfs_repo_name}=RO"
                 EESSI_READONLY_OVERLAY+=" /cvmfs/${cvmfs_repo_name}"
             else
                 echo -e "ERROR: unknown overlay tool specified: ${OVERLAY_TOOL}"
@@ -855,7 +855,7 @@ do
             EESSI_WRITABLE_OVERLAY="container:unionfs"
             # cow stands for 'copy-on-write'
             EESSI_WRITABLE_OVERLAY+=" -o cow"
-            EESSI_WRITABLE_OVERLAY+=" ${TMP_IN_CONTAINER}/${cvmfs_repo_name}/overlay-upper=RW:/cvmfs_ro/software.eessi.io=RO"
+            EESSI_WRITABLE_OVERLAY+=" ${TMP_IN_CONTAINER}/${cvmfs_repo_name}/overlay-upper=RW:/cvmfs_ro/${cvmfs_repo_name}=RO"
             EESSI_WRITABLE_OVERLAY+=" /cvmfs/${cvmfs_repo_name}"
         else
             echo -e "ERROR: unknown overlay tool specified: ${OVERLAY_TOOL}"
