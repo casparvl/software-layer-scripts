@@ -37,6 +37,31 @@ file_changed_in_pr() {
   ) && return 0 || return 1
 }
 
+sed_update_if_changed() {
+    # Usage: sed_update_if_changed 's/foo/bar/' file.txt
+    if [ "$#" -ne 2 ]; then
+        echo "Usage: sed_update_if_changed 'sed_command' file" >&2
+        return 1
+    fi
+
+    local sed_command="$1"
+    local file="$2"
+    local tmp_file="$(mktemp "${file}.XXXXXX")"
+
+    sed "$sed_command" "$file" > "$tmp_file" || {
+        rm -f "$tmp_file"
+        echo "sed command failed" >&2
+        return 1
+    }
+
+    if ! diff -q "$file" "$tmp_file" > /dev/null; then
+        # Use cat to retain existing permissions, set umask to world readable in case the target file does not yet exist. 
+        (umask 022 && cat "$tmp_file" > "$file")
+    fi
+    # Remove the temporary file
+    rm -f "$tmp_file"
+}
+
 compare_and_copy() {
     if [ "$#" -ne 2 ]; then
         echo "Usage of function: compare_and_copy <source_file> <destination_file>"
@@ -193,15 +218,15 @@ copy_files_by_list ${TOPDIR} ${INSTALL_PREFIX}/init/easybuild "${hook_files[@]}"
 # but that should be fine (no changes are made if version placeholder is not present anymore)
 
 # make sure that scripts in init/ and scripts/ use correct EESSI version
-sed -i "s/__EESSI_VERSION_DEFAULT__/${EESSI_VERSION}/g" ${INSTALL_PREFIX}/init/eessi_defaults
+sed_update_if_changed "s/__EESSI_VERSION_DEFAULT__/${EESSI_VERSION}/g" ${INSTALL_PREFIX}/init/eessi_defaults
 
 # replace placeholder for default EESSI version in Lmod init scripts
 for shell in $(ls ${INSTALL_PREFIX}/init/lmod); do
-    sed -i "s/__EESSI_VERSION_DEFAULT__/${EESSI_VERSION}/g" ${INSTALL_PREFIX}/init/lmod/${shell}
+    sed_update_if_changed "s/__EESSI_VERSION_DEFAULT__/${EESSI_VERSION}/g" ${INSTALL_PREFIX}/init/lmod/${shell}
 done
 
 # replace EESSI version used in comments in EESSI module
-sed -i "s@/<EESSI_VERSION>/@/${EESSI_VERSION}/@g" ${INSTALL_PREFIX}/init/modules/EESSI/${EESSI_VERSION}.lua
+sed_update_if_changed "s@/<EESSI_VERSION>/@/${EESSI_VERSION}/@g" ${INSTALL_PREFIX}/init/modules/EESSI/${EESSI_VERSION}.lua
 
 # replace EESSI version used in EasyBuild hooks
-sed -i "s@/<EESSI_VERSION>/@/${EESSI_VERSION}/@g" ${INSTALL_PREFIX}/init/easybuild/eb_hooks.py
+sed_update_if_changed "s@/eessi-<EESSI_VERSION>/@/eessi-${EESSI_VERSION}/@g" ${INSTALL_PREFIX}/init/easybuild/eb_hooks.py
