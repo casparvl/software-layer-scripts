@@ -2,7 +2,7 @@
 name: Tests for EESSI-extend module functionality in software.eessi.io
 on:
   push:
-    branches: [ "*-software.eessi.io" ]
+    branches: [ "main" ]
   pull_request:
 permissions:
   contents: read # to fetch code (actions/checkout)

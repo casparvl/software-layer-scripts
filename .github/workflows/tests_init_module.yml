@@ -2,7 +2,7 @@
 name: Check for EESSI init shell scripts to load eessi software module in software.eessi.io
 on:
   push:
-    branches: [ "*-software.eessi.io" ]
+    branches: [ "main" ]
   pull_request:
   workflow_dispatch:
 permissions:
