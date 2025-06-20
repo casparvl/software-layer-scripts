@@ -128,20 +128,17 @@ def post_ready_hook(self, *args, **kwargs):
     Post-ready hook: limit parallellism for selected builds based on software name and CPU target.
                      parallelism needs to be limited because some builds require a lot of memory per used core.
     """
-    # 'parallel' (EB4) or 'max_parallel' (EB5) easyconfig parameter is set via EasyBlock.set_parallel in ready step
-    # based on available cores.
-
-    # Check whether we have EasyBuild 4 or 5
-    parallel_param = 'parallel'
-    if EASYBUILD_VERSION >= '5':
-        parallel_param = 'max_parallel'
-    # get current parallelism setting
-    parallel = self.cfg[parallel_param]
+    # 'parallel' easyconfig parameter (EB4) or the parallel property (EB5) is set via EasyBlock.set_parallel
+    # in ready step based on available cores
+    parallel = getattr(self, 'parallel', self.cfg['parallel'])
+    
     if parallel == 1:
         return  # no need to limit if already using 1 core
 
     # get CPU target
     cpu_target = get_eessi_envvar('EESSI_SOFTWARE_SUBDIR')
+
+    new_parallel = parallel
 
     # check if we have limits defined for this software
     if self.name in PARALLELISM_LIMITS:
@@ -158,11 +155,19 @@ def post_ready_hook(self, *args, **kwargs):
         else:
             return  # no applicable limits found
 
-        # apply the limit if it's different from current
-        if new_parallel != parallel:
-            self.cfg[parallel_param] = new_parallel
-            msg = "limiting parallelism to %s (was %s) for %s on %s to avoid out-of-memory failures during building/testing"
-            print_msg(msg % (new_parallel, parallel, self.name, cpu_target), log=self.log)
+    # check if there's a general limit set for CPU target
+    elif cpu_target in PARALLELISM_LIMITS:
+        operation_func, operation_args = PARALLELISM_LIMITS[cpu_target]
+        new_parallel = operation_func(parallel, operation_args)
+
+    # apply the limit if it's different from current
+    if new_parallel != parallel:
+        if EASYBUILD_VERSION >= '5':
+            self.cfg.parallel = new_parallel
+        else:
+            self.cfg['parallel'] = new_parallel
+        msg = "limiting parallelism to %s (was %s) for %s on %s to avoid out-of-memory failures during building/testing"
+        print_msg(msg % (new_parallel, parallel, self.name, cpu_target), log=self.log)
 
 
 def pre_prepare_hook(self, *args, **kwargs):
@@ -1376,18 +1381,16 @@ def set_maximum(parallel, max_value):
 # specific CPU target is defined in the data structure below. If not, it checks for
 # the generic '*' entry.
 PARALLELISM_LIMITS = {
+    # by default, only use quarter of cores when building for A64FX;
+    # this is done because total memory is typically limited on A64FX due to HBM,
+    # Deucalion has 32GB HBM for 48 cores per node
+    CPU_TARGET_A64FX: (divide_by_factor, 4),
+    # software-specific limits
     'libxc': {
         '*': (divide_by_factor, 2),
-        CPU_TARGET_A64FX: (set_maximum, 12),
-    },
-    'nodejs': {
-        CPU_TARGET_A64FX: (divide_by_factor, 2),
     },
     'MBX': {
         '*': (divide_by_factor, 2),
-    },
-    'PyTorch': {
-        CPU_TARGET_A64FX: (divide_by_factor, 4),
     },
     'TensorFlow': {
         '*': (divide_by_factor, 2),
@@ -1395,8 +1398,5 @@ PARALLELISM_LIMITS = {
     },
     'Qt5': {
         CPU_TARGET_A64FX: (set_maximum, 8),
-    },
-    'ROOT': {
-        CPU_TARGET_A64FX: (divide_by_factor, 2),
     },
 }
