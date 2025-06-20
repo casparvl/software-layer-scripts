@@ -2,7 +2,7 @@
 name: Tests for eessi_archdetect.sh
 on:
   push:
-    branches: [ "*-software.eessi.io" ]
+    branches: [ "main" ]
   pull_request:
 permissions:
   contents: read # to fetch code (actions/checkout)
