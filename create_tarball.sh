@@ -71,7 +71,7 @@ for subdir in ${cpu_arch_subdir} ${cpu_arch_subdir}/accel/${accel_subdir}; do
         # module symlinks
         find ${eessi_version}/software/${os}/${subdir}/modules -type l \! -name '.wh.*' >> ${files_list}
         # module files and symlinks
-        find ${eessi_version}/software/${os}/${subdir}/modules/all -type f -o -type l \! -name '.wh.*' \
+        find ${eessi_version}/software/${os}/${subdir}/modules/all -type f,l \! -name '.wh.*' \
             | grep -v '/\.modulerc\.lua' | sed -e 's/.lua$//' | sed -e 's@.*/modules/all/@@g' | sort -u \
             >> ${module_files_list}
     fi
