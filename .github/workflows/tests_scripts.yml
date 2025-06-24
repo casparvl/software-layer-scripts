@@ -77,6 +77,8 @@ jobs:
           echo 'eb --version' >> ${test_script}
 
           chmod u+x ${test_script}
+          echo ">> Contents of ${test_script}:"
+          cat ${test_script}
 
           # run wrapper script + capture & check output
           out="${PWD}/eb-${EB_VERSION}.out"
