@@ -85,8 +85,7 @@ for subdir in ${cpu_arch_subdir} ${cpu_arch_subdir}/accel/${accel_subdir}; do
         # installation directories), the procedure will likely not work.
         for package_version in $(cat ${module_files_list}); do
             echo "handling ${package_version}"
-            ls -d ${eessi_version}/software/${os}/${subdir}/software/${package_version} \
-                | grep -v '/\.wh\.' >> ${files_list} || true  # Make sure we don't exit because of set -e if grep doesn't return a match
+            find ${eessi_version}/software/${os}/${subdir}/software/${package_version} -maxdepth 0 -type d \! -name '.wh.*' >> ${files_list}
         done
     fi
 done
