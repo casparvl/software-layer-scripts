@@ -49,17 +49,17 @@ module_files_list=${tmpdir}/module_files.list.txt
 if [ -d ${eessi_version}/software/${os}/${cpu_arch_subdir}/.lmod ]; then
     # include Lmod cache and configuration file (lmodrc.lua),
     # skip whiteout files and backup copies of Lmod cache (spiderT.old.*)
-    find ${eessi_version}/software/${os}/${cpu_arch_subdir}/.lmod -type f | egrep -v '/\.wh\.|spiderT.old' >> ${files_list}
+    find ${eessi_version}/software/${os}/${cpu_arch_subdir}/.lmod -type f | egrep -v '/\.wh\.|spiderT.old' >> ${files_list} || true  # Make sure we don't exit because of set -e if grep doesn't return a match
 fi
 
 # include scripts that were copied by install_scripts.sh, which we want to ship in EESSI repository
 if [ -d ${eessi_version}/scripts ]; then
-    find ${eessi_version}/scripts -type f | grep -v '/\.wh\.' >> ${files_list}
+    find ${eessi_version}/scripts -type f | grep -v '/\.wh\.' >> ${files_list} || true  # Make sure we don't exit because of set -e if grep doesn't return a match
 fi
 
 # also include init, which is also copied by install_scripts.sh
 if [ -d ${eessi_version}/init ]; then
-    find ${eessi_version}/init -type f | grep -v '/\.wh\.' >> ${files_list}
+    find ${eessi_version}/init -type f | grep -v '/\.wh\.' >> ${files_list} || true  # Make sure we don't exit because of set -e if grep doesn't return a match
 fi
 
 # consider both CPU-only and accelerator subdirectories
