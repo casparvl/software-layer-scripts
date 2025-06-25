@@ -77,12 +77,12 @@ jobs:
           echo 'eb --version' >> ${test_script}
 
           chmod u+x ${test_script}
-          echo ">> Contents of ${test_script}:"
-          cat ${test_script}
+
+          # make sure that correct EESSI version is used (required because default is a placeholder version)
+          export EESSI_VERSION_OVERRIDE="${{matrix.EESSI_VERSION}}"
 
           # run wrapper script + capture & check output
           out="${PWD}/eb-${EB_VERSION}.out"
-          export EESSI_VERSION_OVERRIDE="${{matrix.EESSI_VERSION}}"
           ./eessi_container.sh --access rw --mode run --verbose /software-layer-scripts/run_in_compat_layer_env.sh /software-layer-scripts/eb-${EB_VERSION}.sh 2>&1 | tee ${out}
           pattern="^This is EasyBuild ${EB_VERSION} "
           grep "${pattern}" ${out} || (echo "Pattern '${pattern}' not found in output!" && exit 1)
@@ -96,12 +96,17 @@ jobs:
           sed -i "s@./EESSI-install-software.sh@\"export EESSI_SOFTWARE_SUBDIR_OVERRIDE='x86_64/generic'; ./EESSI-install-software.sh\"@g" install_software_layer.sh
           # skip installation of CUDA SDKs, since this is too heavy for CI
           sed -i "s@./EESSI-install-software.sh@./EESSI-install-software.sh --skip-cuda-install@g" install_software_layer.sh
+
+          # make sure that correct EESSI version is used (required because default is a placeholder version)
+          export EESSI_VERSION_OVERRIDE="${{matrix.EESSI_VERSION}}"
+
           ./eessi_container.sh --mode run --verbose /software-layer-scripts/install_software_layer.sh
 
     - name: test create_directory_tarballs.sh script
       run: |
           # bind current directory into container as /software-layer-scripts
           export SINGULARITY_BIND="${PWD}:/software-layer-scripts"
+
           # scripts need to be copied to /tmp,
           # since create_directory_tarballs.sh must be accessible from within build container
           ./eessi_container.sh --mode run --verbose /software-layer-scripts/create_directory_tarballs.sh 2023.06
