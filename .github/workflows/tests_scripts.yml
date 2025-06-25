@@ -107,6 +107,9 @@ jobs:
           # bind current directory into container as /software-layer-scripts
           export SINGULARITY_BIND="${PWD}:/software-layer-scripts"
 
+          # make sure that correct EESSI version is used (required because default is a placeholder version)
+          export EESSI_VERSION_OVERRIDE="${{matrix.EESSI_VERSION}}"
+
           # scripts need to be copied to /tmp,
           # since create_directory_tarballs.sh must be accessible from within build container
           ./eessi_container.sh --mode run --verbose /software-layer-scripts/create_directory_tarballs.sh 2023.06
