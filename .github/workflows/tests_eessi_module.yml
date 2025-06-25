@@ -193,6 +193,7 @@ jobs:
           # Set our accelerator path overrides according to our matrix
           if [[ "${{matrix.EESSI_ACCELERATOR_TARGET_OVERRIDE}}" != "none" ]]; then
               export EESSI_ACCELERATOR_TARGET_OVERRIDE=${{matrix.EESSI_ACCELERATOR_TARGET_OVERRIDE}}
+              export FINAL_ACCELERATOR_PATH_EXPECTED=${{matrix.FINAL_ACCELERATOR_PATH_EXPECTED}}
           fi
 
           # Turn on debug output in case we want to take a look
