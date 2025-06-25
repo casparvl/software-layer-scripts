@@ -44,10 +44,9 @@ if __name__ == "__main__":
             # EESSI_ACCEL_SUBDIR is what is detected by archdetect (or respects EESSI_ACCELERATOR_TARGET_OVERRIDE)
             check_env_equals("EESSI_ACCELERATOR_TARGET_OVERRIDE", "EESSI_ACCEL_SUBDIR")
             # special case is where EESSI_ACCELERATOR_TARGET_OVERRIDE may not match the final
-            # accelerator architecture chosen (in CI we deliberately choose a non-existent CUDA
-            # compute cabability for one case)
-            os.environ["EESSI_FINAL_CC"] = expected_eessi_accel_arch[:-1] + "0"
-            check_env_equals("EESSI_ACCELERATOR_TARGET", "EESSI_FINAL_CC")
+            # accelerator architecture chosen.
+            # In CI we set FINAL_ACCELERATOR_PATH_EXPECTED to allow us to compare against an expected value.
+            check_env_equals("EESSI_ACCELERATOR_TARGET", "FINAL_ACCELERATOR_PATH_EXPECTED")
         # verify the software paths that should exist
         check_env_endswith("EESSI_SOFTWARE_PATH", "EESSI_SOFTWARE_SUBDIR")
         check_env_endswith("EESSI_SITE_SOFTWARE_PATH", "EESSI_SOFTWARE_SUBDIR")

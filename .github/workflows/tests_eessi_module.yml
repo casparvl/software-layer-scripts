@@ -74,8 +74,9 @@ jobs:
           - x86_64/amd/zen4
         EESSI_ACCELERATOR_TARGET_OVERRIDE:
           - accel/nvidia/cc80
-          # This should fall back to cc70
+          # This should fall back to cc70 but that is checked later (in this step we just check for consistency)
           - accel/nvidia/cc77
+
     steps:
       - name: Check out software-layer repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
@@ -160,8 +161,14 @@ jobs:
         EESSI_ACCELERATOR_TARGET_OVERRIDE:
           - none
           - accel/nvidia/cc80
-          # This should fall back to cc70
           - accel/nvidia/cc77
+        include:
+          # For each override we expect a specific path (which may differ from the original due to overrides)
+        - EESSI_ACCELERATOR_TARGET_OVERRIDE: accel/nvidia/cc80
+          FINAL_ACCELERATOR_PATH_EXPECTED: accel/nvidia/cc80
+        - EESSI_ACCELERATOR_TARGET_OVERRIDE: accel/nvidia/cc77  # deliberately chose a non-existent CUDA capability
+          FINAL_ACCELERATOR_PATH_EXPECTED: accel/nvidia/cc70  # this reverts to the fallback case (which does exist)
+
     steps:
       - name: Check out software-layer repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
