@@ -520,24 +520,18 @@ def post_module_hook_zen4_gcccore1220(self, *args, **kwargs):
                 del self.initial_environ[EESSI_IGNORE_ZEN4_GCC1220_ENVVAR]
 
 
-def post_easyblock_hook_copy_exts_patches_to_easybuild_subdir(self, *args, **kwargs):
-    """Copy the patches of extensions to the easybuild subdir of the installation directory."""
+def post_easyblock_hook_copy_easybuild_subdir(self, *args, **kwargs):
+    """
+    Post easyblock hook that copies the easybuild subdirectory of every installed application
+    to a central and timestamped location in the root of the software stack, e.g.:
+    /path/to/stack/reprod/20250102T12:34:56Z/MyApp/1.2-foss-2025a
+    """
 
-    # Temporary fix for https://github.com/easybuilders/easybuild-framework/issues/4864:
-    # make sure that the patches of extensions are copied to the easybuild subdirectory
-    for ext in self.exts:
-        for patch in ext.get('patches', []):
-            new_log_dir = os.path.join(self.installdir, config.log_path(ec=self.cfg))
-            target = os.path.join(new_log_dir, os.path.basename(patch['path']))
-            copy_file(patch['path'], target)
-
-    # Now we simply copy the entire "easybuild" subdirectory of the installed application
-    # to a timestamped subdirectory of the stack's central reprod directory, e.g.:
-    #
     stack_reprod_dir = os.path.join(os.path.dirname(install_path()), STACK_REPROD_SUBDIR)
     now_utc_timestamp = datetime.datetime.now(datetime.UTC).isoformat('T', 'seconds').replace('+00:00', 'Z')
-    app_reprod_dir = os.path.join(stack_reprod_dir, self.install_subdir, now_utc_timestamp)
-    copy_dir(new_log_dir, app_reprod_dir)
+    app_easybuild_dir = os.path.join(self.installdir, config.log_path(ec=self.cfg))
+    app_reprod_dir = os.path.join(stack_reprod_dir, self.install_subdir, now_utc_timestamp, 'easybuild')
+    copy_dir(app_easybuild_dir, app_reprod_dir)
 
 
 # Modules for dependencies are loaded in the prepare step. Thus, that's where we need this variable to be set
@@ -1327,23 +1321,7 @@ def post_easyblock_hook(self, *args, **kwargs):
         POST_EASYBLOCK_HOOKS[self.name](self, *args, **kwargs)
 
     # Always trigger this one, regardless of self.name
-    post_easyblock_hook_copy_exts_patches_to_easybuild_subdir(self, *args, **kwargs)
-
-
-def post_build_and_install_loop_hook(ecs, *args, **kwargs):
-    """
-    Post build and install loop hook that copies the easybuild subdirectory of every installed application
-    to a central location in the root of the software stack, e.g.:
-    /path/to/stack/reprod/20250102T12:34:56Z/MyApp/1.2-foss-2025a
-    """
-
-    stack_reprod_dir = os.path.join(os.path.dirname(install_path()), STACK_REPROD_SUBDIR)
-    for (ec, status) in ecs:
-        if status['success']:
-            now_timestamp = datetime.datetime.now(datetime.UTC).isoformat('T', 'seconds').replace('+00:00', 'Z')
-            app_easybuild_dir = os.path.dirname(status['log_file'])
-            app_reprod_dir = os.path.join(stack_reprod_dir, ec['short_mod_name'], now_timestamp, 'easybuild')
-            copy_dir(app_easybuild_dir, app_reprod_dir)
+    post_easyblock_hook_copy_easybuild_subdir(self, *args, **kwargs)
 
 
 PARSE_HOOKS = {
