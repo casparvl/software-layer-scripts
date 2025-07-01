@@ -41,7 +41,7 @@ jobs:
         - name: Test eessi_container.sh script
           run: |
               test_cmd="cat /etc/os-release"
-              out_pattern="Debian GNU/Linux 11"
+              out_pattern="Debian GNU/Linux 12"
 
               if [[ ${{matrix.SCRIPT_TEST}} == 'help' ]]; then
                 ./eessi_container.sh --help
@@ -116,7 +116,7 @@ jobs:
                 rm -f ${outfile}
 
                 # make sure that container image exists
-                test -f ${tmpdir}/ghcr.io_eessi_build_node_debian11.sif || (echo "Container image not found in ${tmpdir}" >&2 && ls ${tmpdir} && exit 1)
+                test -f ${tmpdir}/ghcr.io_eessi_build_node_debian12.sif || (echo "Container image not found in ${tmpdir}" >&2 && ls ${tmpdir} && exit 1)
 
                 ./eessi_container.sh --verbose --resume ${tmpdir} --mode shell <<< "${test_cmd}" > ${outfile}
                 cat ${outfile}

@@ -77,7 +77,7 @@ display_help() {
   echo "                            To specify multiple bind paths, separate by comma."
   echo "                            Example: '/src:/dest:ro,/src2:/dest2:rw'"
   echo "  -c | --container IMG    - image file or URL defining the container to use"
-  echo "                            [default: docker://ghcr.io/eessi/build-node:debian11]"
+  echo "                            [default: docker://ghcr.io/eessi/build-node:debian12]"
   echo "  -f | --fakeroot         - run the container with --fakeroot [default: false]"
   echo "  -g | --storage DIR      - directory space on host machine (used for"
   echo "                            temporary data) [default: 1. TMPDIR, 2. /tmp]"
@@ -92,7 +92,7 @@ display_help() {
   echo "                            attach a GPU, MODE==all for both [default: false]"
   echo "  -o | --overlay-tool ARG - tool to use to create (read-only or writable) overlay;"
   echo "                            selected tool *must* be available in container image being used;"
-  echo "                            can be 'fuse-overlayfs' or 'unionfs' [default: fuse-overlayfs]"
+  echo "                            can be 'fuse-overlayfs' or 'unionfs' [default: unionfs]"
   echo "  -p | --pass-through ARG - argument to pass through to the launch of the"
   echo "                            container; can be given multiple times [default: not set]"
   echo "  -r | --repository CFG   - configuration file or identifier defining the"
@@ -125,14 +125,14 @@ display_help() {
 
 # set defaults for command line arguments
 ACCESS="ro"
-CONTAINER="docker://ghcr.io/eessi/build-node:debian11"
+CONTAINER="docker://ghcr.io/eessi/build-node:debian12"
 #DRY_RUN=0
 FAKEROOT=0
 VERBOSE=0
 STORAGE=
 LIST_REPOS=0
 MODE="shell"
-OVERLAY_TOOL="fuse-overlayfs"
+OVERLAY_TOOL="unionfs"
 PASS_THROUGH=()
 SETUP_NVIDIA=0
 REPOSITORIES=()
