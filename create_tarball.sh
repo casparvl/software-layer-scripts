@@ -48,18 +48,18 @@ module_files_list=${tmpdir}/module_files.list.txt
 
 if [ -d ${eessi_version}/software/${os}/${cpu_arch_subdir}/.lmod ]; then
     # include Lmod cache and configuration file (lmodrc.lua),
-    # skip whiteout files and backup copies of Lmod cache (spiderT.old.*)
-    find ${eessi_version}/software/${os}/${cpu_arch_subdir}/.lmod -type f | egrep -v '/\.wh\.|spiderT.old' >> ${files_list}
+    # skip whiteout files (.wh.*) and backup copies of Lmod cache (spiderT.old.*)
+    find ${eessi_version}/software/${os}/${cpu_arch_subdir}/.lmod -type f \( \! -name 'spiderT.old.*' -a \! -name '.wh.*' \) >> ${files_list}
 fi
 
 # include scripts that were copied by install_scripts.sh, which we want to ship in EESSI repository
 if [ -d ${eessi_version}/scripts ]; then
-    find ${eessi_version}/scripts -type f | grep -v '/\.wh\.' >> ${files_list}
+    find ${eessi_version}/scripts -type f \! -name '.wh.*' >> ${files_list}
 fi
 
 # also include init, which is also copied by install_scripts.sh
 if [ -d ${eessi_version}/init ]; then
-    find ${eessi_version}/init -type f | grep -v '/\.wh\.' >> ${files_list}
+    find ${eessi_version}/init -type f \! -name '.wh.*' >> ${files_list}
 fi
 
 # consider both CPU-only and accelerator subdirectories
@@ -67,12 +67,12 @@ for subdir in ${cpu_arch_subdir} ${cpu_arch_subdir}/accel/${accel_subdir}; do
 
     if [ -d ${eessi_version}/software/${os}/${subdir}/modules ]; then
         # module files
-        find ${eessi_version}/software/${os}/${subdir}/modules -type f | grep -v '/\.wh\.' >> ${files_list} || true  # Make sure we don't exit because of set -e if grep doesn't return a match
+        find ${eessi_version}/software/${os}/${subdir}/modules -type f \! -name '.wh.*' >> ${files_list}
         # module symlinks
-        find ${eessi_version}/software/${os}/${subdir}/modules -type l | grep -v '/\.wh\.' >> ${files_list} || true  # Make sure we don't exit because of set -e if grep doesn't return a match
+        find ${eessi_version}/software/${os}/${subdir}/modules -type l \! -name '.wh.*' >> ${files_list}
         # module files and symlinks
-        find ${eessi_version}/software/${os}/${subdir}/modules/all -type f -o -type l \
-            | grep -v '/\.wh\.' | grep -v '/\.modulerc\.lua' | sed -e 's/.lua$//' | sed -e 's@.*/modules/all/@@g' | sort -u \
+        find ${eessi_version}/software/${os}/${subdir}/modules/all -type f,l \! -name '.wh.*' \
+            | grep -v '/\.modulerc\.lua' | sed -e 's/.lua$//' | sed -e 's@.*/modules/all/@@g' | sort -u \
             >> ${module_files_list}
     fi
 
@@ -85,8 +85,7 @@ for subdir in ${cpu_arch_subdir} ${cpu_arch_subdir}/accel/${accel_subdir}; do
         # installation directories), the procedure will likely not work.
         for package_version in $(cat ${module_files_list}); do
             echo "handling ${package_version}"
-            ls -d ${eessi_version}/software/${os}/${subdir}/software/${package_version} \
-                | grep -v '/\.wh\.' >> ${files_list} || true  # Make sure we don't exit because of set -e if grep doesn't return a match
+            find ${eessi_version}/software/${os}/${subdir}/software/${package_version} -maxdepth 0 -type d \! -name '.wh.*' >> ${files_list}
         done
     fi
 done
