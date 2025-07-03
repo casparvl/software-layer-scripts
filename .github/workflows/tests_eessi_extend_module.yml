@@ -130,6 +130,11 @@ jobs:
       - name: Run tests for EESSI-extend in the various GPU scenarios
         run: |
           export MY_INSTALLATION_PATH=/tmp/easybuild
+
+          # Define a function to check the values of environment variables
+          # and another that checks an environment does not contain environment 
+          # variables matching a certain pattern
+          source .github/workflows/scripts/test_utils.sh
           
           # Set an environment variable to use when we want to target accelerators
           export STORED_EESSI_ACCELERATOR_TARGET_OVERRIDE="accel/nvidia/cc80"
