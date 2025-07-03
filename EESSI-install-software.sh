@@ -284,6 +284,11 @@ if [[ ! -z ${EESSI_DEV_PROJECT} ]]; then
     echo ">> \$EESSI_PROJECT_INSTALL set to ${EESSI_PROJECT_INSTALL}"
 fi
 
+# If we have EESSI_ACCELERATOR_TARGET_OVERRIDE set (and non-empty), then this implies building for a GPU target
+if [[ -n "$EESSI_ACCELERATOR_TARGET_OVERRIDE" ]]; then
+  export EESSI_ACCELERATOR_INSTALL=1
+fi
+
 echo "DEBUG: before loading EESSI-extend // EASYBUILD_INSTALLPATH='${EASYBUILD_INSTALLPATH}'"
 source $TOPDIR/load_eessi_extend_module.sh ${EESSI_VERSION}
 echo "DEBUG: after loading EESSI-extend //  EASYBUILD_INSTALLPATH='${EASYBUILD_INSTALLPATH}'"
