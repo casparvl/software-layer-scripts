@@ -162,7 +162,12 @@ export EESSI_SOFTWARE_SUBDIR_OVERRIDE
 echo "bot/build.sh: EESSI_SOFTWARE_SUBDIR_OVERRIDE='${EESSI_SOFTWARE_SUBDIR_OVERRIDE}'"
 
 # determine accelerator target (if any) from .architecture in ${JOB_CFG_FILE}
-export EESSI_ACCELERATOR_TARGET_OVERRIDE="accel/$(cfg_get_value architecture accelerator)"
+ACCEL_OVERRIDE=$(cfg_get_value "architecture" "accelerator")
+if [[ -n "$ACCEL_OVERRIDE" ]]; then
+    # bot job config does not include accel subdirectory
+    export EESSI_ACCELERATOR_TARGET_OVERRIDE="accel/$ACCEL_OVERRIDE"
+else
+    export EESSI_ACCELERATOR_TARGET_OVERRIDE=""
 echo "bot/build.sh: EESSI_ACCELERATOR_TARGET_OVERRIDE='${EESSI_ACCELERATOR_TARGET_OVERRIDE}'"
 
 # get EESSI_OS_TYPE from .architecture.os_type in ${JOB_CFG_FILE} (default: linux)
