@@ -74,7 +74,7 @@ if [[ $? -eq 0 ]]; then
     # $PR_DIFF should be set by the calling script (EESSI-install-software.sh)
     if [[ ! -z ${PR_DIFF} ]] && [[ -f "$PR_DIFF" ]]; then
         # check if EESSI-extend easyconfig was modified; if so, we need to rebuild it
-        grep -q "^\+\+\+ b/${EESSI_EXTEND_EASYCONFIG}" "${PR_DIFF}"
+        grep -q "^+++ b/${EESSI_EXTEND_EASYCONFIG}" "${PR_DIFF}"
         if [[ $? -eq 0 ]]; then
             rebuild_eessi_extend=true
         fi
