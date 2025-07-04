@@ -38,7 +38,7 @@ description = """
 
  Strict installation path checking is enforced by EESSI for EESSI and site
  installations involving accelerators. In these cases, if you wish to create an
- accelerator installation you must set the environement variable
+ accelerator installation you must set the environment variable
  EESSI_ACCELERATOR_INSTALL (and load/reload this module).
 """
 
