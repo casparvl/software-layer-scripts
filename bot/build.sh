@@ -168,6 +168,7 @@ if [[ -n "$ACCEL_OVERRIDE" ]]; then
     export EESSI_ACCELERATOR_TARGET_OVERRIDE="accel/$ACCEL_OVERRIDE"
 else
     export EESSI_ACCELERATOR_TARGET_OVERRIDE=""
+fi
 echo "bot/build.sh: EESSI_ACCELERATOR_TARGET_OVERRIDE='${EESSI_ACCELERATOR_TARGET_OVERRIDE}'"
 
 # get EESSI_OS_TYPE from .architecture.os_type in ${JOB_CFG_FILE} (default: linux)
