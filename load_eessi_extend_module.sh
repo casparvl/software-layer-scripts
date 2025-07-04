@@ -117,7 +117,7 @@ if [ "${install_eessi_extend}" = true ] || [ "${rebuild_eessi_extend}" = true ];
 
         # while always adding --try-amend=keep... may do no harm, we could make
         # an attempt to figure out if it is needed, e.g., when we are rebuilding
-        eb_args="--try-amend=keeppreviousinstall=True "
+        eb_args=""
         if [ "${rebuild_eessi_extend}" = true ]; then
             eb_args+="--rebuild"
         fi
