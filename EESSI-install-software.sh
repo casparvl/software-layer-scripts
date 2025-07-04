@@ -288,7 +288,7 @@ fi
 # (this must be set _before_ we load EESSI-extend).
 # We also make sure that EESSI_ACCELERATOR_TARGET is also set as EESSI_ACCELERATOR_TARGET_OVERRIDE must
 # be set before the EESSI module is loaded in order to set accelerator information.
-if [[ -n "$EESSI_ACCELERATOR_TARGET_OVERRIDE" && -n "$EESSI_ACCELERATOR_TARGET" ]]; then
+if [[ -n "$EESSI_ACCELERATOR_TARGET_OVERRIDE" && -z "$EESSI_ACCELERATOR_TARGET" ]]; then
   fatal_error "EESSI module should've set EESSI_ACCELERATOR_TARGET ($EESSI_ACCELERATOR_TARGET) when EESSI_ACCELERATOR_TARGET_OVERRIDE ($EESSI_ACCELERATOR_TARGET_OVERRIDE) exported."
 elif [[ -n "$EESSI_ACCELERATOR_TARGET_OVERRIDE" ]]; then
   export EESSI_ACCELERATOR_INSTALL=1
