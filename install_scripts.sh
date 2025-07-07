@@ -213,13 +213,12 @@ nvidia_files=(
 )
 copy_files_by_list ${TOPDIR}/scripts/gpu_support/nvidia ${INSTALL_PREFIX}/scripts/gpu_support/nvidia "${nvidia_files[@]}"
 
-# Easystacks to be used to install software in host injections
-host_injections_easystacks=(
-    eessi-2023.06-eb-4.9.4-2023a-CUDA-host-injections.yml
-    eessi-2023.06-eb-4.9.4-2023b-CUDA-host-injections.yml
-)
-copy_files_by_list ${TOPDIR}/scripts/gpu_support/nvidia/easystacks \
-${INSTALL_PREFIX}/scripts/gpu_support/nvidia/easystacks "${host_injections_easystacks[@]}"
+# Easystacks to be used to install software in host injections for this EESSI version
+host_injections_easystacks_dir=${TOPDIR}/scripts/gpu_support/nvidia/easystacks/${EESSI_VERSION}
+if [[ -d ${host_injections_easystacks_dir} ]]; then
+    host_injections_easystacks=$(find ${host_injections_easystacks_dir} -name eessi-${EESSI_VERSION}-*-CUDA-host-injections.yml -exec basename {} \;)
+    copy_files_by_list ${host_injections_easystacks_dir} ${INSTALL_PREFIX}/scripts/gpu_support/nvidia/easystacks "${host_injections_easystacks[@]}"
+fi
 
 # Copy over EasyBuild hooks file used for installations
 hook_files=(
