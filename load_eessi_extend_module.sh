@@ -115,8 +115,6 @@ if [ "${install_eessi_extend}" = true ] || [ "${rebuild_eessi_extend}" = true ];
         ok_msg="EESSI-extend/${EESSI_EXTEND_VERSION} installed, let's go!"
         fail_msg="Installing EESSI-extend/${EESSI_EXTEND_VERSION} failed, that's not good... (output: ${eessi_install_out})"
 
-        # while always adding --try-amend=keep... may do no harm, we could make
-        # an attempt to figure out if it is needed, e.g., when we are rebuilding
         eb_args=""
         if [ "${rebuild_eessi_extend}" = true ]; then
             eb_args+="--rebuild"
