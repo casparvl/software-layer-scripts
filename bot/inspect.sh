@@ -402,7 +402,7 @@ echo " - job directory is $HOME (\$HOME), check for slurm-*.out file"
 echo " - temporary data of the job is available at /tmp"
 echo " - note, the prefix $EESSI_PREFIX is writable"
 echo
-echo "You may want to load an EasyBuild/EESSI-extend modules. The inspect.sh script does not"
+echo "You may want to load an EasyBuild/EESSI-extend module. The inspect.sh script does not"
 echo "load those automatically, because multiple versions might have been used by the job."
 echo "Choose an EasyBuild version (see installed versions with 'module avail EasyBuild')"
 echo "and simply run"
