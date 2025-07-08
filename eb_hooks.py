@@ -1316,6 +1316,8 @@ def post_module_hook(self, *args, **kwargs):
         post_module_hook_zen4_gcccore1220(self, *args, **kwargs)
 
 
+# The post_easyblock_hook was introduced in EasyBuild 5.1.1.
+# Older versions would fail if the function is defined anyway, as EasyBuild performs some checks on function names in hooks files.
 if EASYBUILD_VERSION >= '5.1.1':
     def post_easyblock_hook(self, *args, **kwargs):
         """Main post easyblock hook: trigger custom functions based on software name."""
