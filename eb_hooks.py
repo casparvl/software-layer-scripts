@@ -1324,9 +1324,10 @@ if EASYBUILD_VERSION >= '5.1.1':
         if self.name in POST_EASYBLOCK_HOOKS:
             POST_EASYBLOCK_HOOKS[self.name](self, *args, **kwargs)
 
-        # Always trigger this one for EESSI CVMFS/site installations, regardless of self.name
+        # Always trigger this one for EESSI CVMFS/site installations and version 2025.06 or newer, regardless of self.name
         if os.getenv('EESSI_CVMFS_INSTALL') or os.getenv('EESSI_SITE_INSTALL'):
-            post_easyblock_hook_copy_easybuild_subdir(self, *args, **kwargs)
+            if os.getenv('EESSI_VERSION') and LooseVersion(os.getenv('EESSI_VERSION')) >= '2025.06':
+                post_easyblock_hook_copy_easybuild_subdir(self, *args, **kwargs)
         else:
             self.log.debug("No CVMFS/site installation requested, not running post_easyblock_hook_copy_easybuild_subdir.")
 else:
