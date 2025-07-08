@@ -50,6 +50,14 @@ EESSI_IGNORE_ZEN4_GCC1220_ENVVAR="EESSI_IGNORE_LMOD_ERROR_ZEN4_GCC1220"
 
 STACK_REPROD_SUBDIR = 'reprod'
 
+# The post_easyblock_hook was introduced in EB 5.1.1
+MIN_EASYBUILD_VERSION_REQUIRED = '5.1.1'
+if EASYBUILD_VERSION < MIN_EASYBUILD_VERSION_REQUIRED:
+    raise EasyBuildError(
+        f"This hooks file requires at least EasyBuild version {MIN_EASYBUILD_VERSION_REQUIRED}, you are using {EASYBUILD_VERSION}."
+    )
+
+
 def is_gcccore_1220_based(**kwargs):
 # ecname, ecversion, tcname, tcversion):
     """
