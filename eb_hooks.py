@@ -525,7 +525,7 @@ def post_easyblock_hook_copy_easybuild_subdir(self, *args, **kwargs):
     """
     Post easyblock hook that copies the easybuild subdirectory of every installed application
     to a central and timestamped location in the root of the software stack, e.g.:
-    /path/to/stack/reprod/20250102T12:34:56Z/MyApp/1.2-foss-2025a
+    /path/to/stack/reprod/MyApp/1.2-foss-2025a/20250102T12:34:56Z
     """
 
     stack_reprod_dir = os.path.join(os.path.dirname(install_path()), STACK_REPROD_SUBDIR)
