@@ -50,13 +50,6 @@ EESSI_IGNORE_ZEN4_GCC1220_ENVVAR="EESSI_IGNORE_LMOD_ERROR_ZEN4_GCC1220"
 
 STACK_REPROD_SUBDIR = 'reprod'
 
-# The post_easyblock_hook was introduced in EB 5.1.1
-MIN_EASYBUILD_VERSION_REQUIRED = '5.1.1'
-if EASYBUILD_VERSION < MIN_EASYBUILD_VERSION_REQUIRED:
-    raise EasyBuildError(
-        f"This hooks file requires at least EasyBuild version {MIN_EASYBUILD_VERSION_REQUIRED}, you are using {EASYBUILD_VERSION}."
-    )
-
 
 def is_gcccore_1220_based(**kwargs):
 # ecname, ecversion, tcname, tcversion):
@@ -1323,14 +1316,19 @@ def post_module_hook(self, *args, **kwargs):
         post_module_hook_zen4_gcccore1220(self, *args, **kwargs)
 
 
-def post_easyblock_hook(self, *args, **kwargs):
-    """Main post easyblock hook: trigger custom functions based on software name."""
-    if self.name in POST_EASYBLOCK_HOOKS:
-        POST_EASYBLOCK_HOOKS[self.name](self, *args, **kwargs)
+if EASYBUILD_VERSION >= '5.1.1':
+    def post_easyblock_hook(self, *args, **kwargs):
+        """Main post easyblock hook: trigger custom functions based on software name."""
+        if self.name in POST_EASYBLOCK_HOOKS:
+            POST_EASYBLOCK_HOOKS[self.name](self, *args, **kwargs)
 
-    # Always trigger this one for EESSI CVMFS/site installations, regardless of self.name
-    if os.getenv('EESSI_CVMFS_INSTALL') or os.getenv('EESSI_SITE_INSTALL'):
-        post_easyblock_hook_copy_easybuild_subdir(self, *args, **kwargs)
+        # Always trigger this one for EESSI CVMFS/site installations, regardless of self.name
+        if os.getenv('EESSI_CVMFS_INSTALL') or os.getenv('EESSI_SITE_INSTALL'):
+            post_easyblock_hook_copy_easybuild_subdir(self, *args, **kwargs)
+        else:
+            self.log.debug("No CVMFS/site installation requested, not running post_easyblock_hook_copy_easybuild_subdir.")
+else:
+    print_msg(f"Not enabling the post_easybuild_hook, as it requires EasyBuild 5.1.1 or newer.")
 
 
 PARSE_HOOKS = {
