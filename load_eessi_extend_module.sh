@@ -96,7 +96,7 @@ if [ "${install_eessi_extend}" = true ] || [ "${rebuild_eessi_extend}" = true ];
     ORIG_PATH=${PATH}
     ORIG_PYTHONPATH=${PYTHONPATH}
 
-    # source configure_easybuild to use correct eb settings
+    # minimally configure easybuild to get EESSI-extend in the right place
     (
         export EASYBUILD_PREFIX=${TMPDIR}/easybuild
         export EASYBUILD_READ_ONLY_INSTALLDIR=1
