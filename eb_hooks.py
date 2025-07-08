@@ -1320,8 +1320,9 @@ def post_easyblock_hook(self, *args, **kwargs):
     if self.name in POST_EASYBLOCK_HOOKS:
         POST_EASYBLOCK_HOOKS[self.name](self, *args, **kwargs)
 
-    # Always trigger this one, regardless of self.name
-    post_easyblock_hook_copy_easybuild_subdir(self, *args, **kwargs)
+    # Always trigger this one for EESSI CVMFS/site installations, regardless of self.name
+    if os.getenv('EESSI_CVMFS_INSTALL') or os.getenv('EESSI_SITE_INSTALL'):
+        post_easyblock_hook_copy_easybuild_subdir(self, *args, **kwargs)
 
 
 PARSE_HOOKS = {
