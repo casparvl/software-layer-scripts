@@ -28,7 +28,7 @@ LOCAL_TMPDIR=$(mktemp -d)
 source $TOPDIR/scripts/utils.sh
 
 # configure EasyBuild via EESSI-extend
-module load EESSI-extend
+module load EESSI-extend/${EESSI_VERSION}-easybuild
 
 echo ">> Active EasyBuild configuration when checking for missing installations:"
 ${EB:-eb} --show-config
