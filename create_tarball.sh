@@ -64,7 +64,7 @@ fi
 
 # consider both CPU-only and accelerator subdirectories (if an accelerator was configured)
 sw_subdirs=${cpu_arch_subdir}
-if [ -n ${accel_subdir} ]; then
+if [ -n "${accel_subdir}" ]; then
     sw_subdirs="${sw_subdirs} ${cpu_arch_subdir}/${accel_subdir}"
 fi
 for subdir in ${sw_subdirs}; do
