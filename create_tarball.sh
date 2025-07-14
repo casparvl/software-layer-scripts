@@ -5,7 +5,7 @@ set -e
 base_dir=$(dirname $(realpath $0))
 
 if [ $# -ne 5 ]; then
-    echo "ERROR: Usage: $0 <EESSI tmp dir (example: /tmp/$USER/EESSI)> <version (example: 2023.06)> <CPU arch subdir (example: x86_64/amd/zen2)> <accelerator subdir (example: nvidia/cc80)> <path to tarball>" >&2
+    echo "ERROR: Usage: $0 <EESSI tmp dir (example: /tmp/$USER/EESSI)> <version (example: 2023.06)> <CPU arch subdir (example: x86_64/amd/zen2)> <accelerator subdir (example: accel/nvidia/cc80)> <path to tarball>" >&2
     exit 1
 fi
 eessi_tmpdir=$1
@@ -62,8 +62,12 @@ if [ -d ${eessi_version}/init ]; then
     find ${eessi_version}/init -type f \! -name '.wh.*' >> ${files_list}
 fi
 
-# consider both CPU-only and accelerator subdirectories
-for subdir in ${cpu_arch_subdir} ${cpu_arch_subdir}/accel/${accel_subdir}; do
+# consider both CPU-only and accelerator subdirectories (if an accelerator was configured)
+sw_subdirs=${cpu_arch_subdir}
+if [ -n "${accel_subdir}" ]; then
+    sw_subdirs="${sw_subdirs} ${cpu_arch_subdir}/${accel_subdir}"
+fi
+for subdir in ${sw_subdirs}; do
 
     if [ -d ${eessi_version}/software/${os}/${subdir}/modules ]; then
         # module files
