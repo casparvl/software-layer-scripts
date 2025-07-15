@@ -529,7 +529,7 @@ def post_easyblock_hook_copy_easybuild_subdir(self, *args, **kwargs):
     """
 
     stack_reprod_dir = os.path.join(os.path.dirname(install_path()), STACK_REPROD_SUBDIR)
-    now_utc_timestamp = datetime.datetime.now(datetime.UTC).isoformat('T', 'seconds').replace('+00:00', 'Z')
+    now_utc_timestamp = datetime.datetime.now(datetime.UTC).strftime('%Y%m%d_%H%M%S%Z')
     app_easybuild_dir = os.path.join(self.installdir, config.log_path(ec=self.cfg))
     app_reprod_dir = os.path.join(stack_reprod_dir, self.install_subdir, now_utc_timestamp, 'easybuild')
     copy_dir(app_easybuild_dir, app_reprod_dir)
