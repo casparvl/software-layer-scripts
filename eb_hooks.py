@@ -9,7 +9,7 @@ import easybuild.tools.environment as env
 from easybuild.easyblocks.generic.configuremake import obtain_config_guess
 from easybuild.framework.easyconfig.constants import EASYCONFIG_CONSTANTS
 from easybuild.tools import config
-from easybuild.tools.build_log import EasyBuildError, print_msg
+from easybuild.tools.build_log import EasyBuildError, print_msg, print_warning
 from easybuild.tools.config import build_option, install_path, update_build_option
 from easybuild.tools.filetools import apply_regex_substitutions, copy_dir, copy_file, remove_file, symlink, which
 from easybuild.tools.run import run_cmd
@@ -1331,7 +1331,7 @@ if EASYBUILD_VERSION >= '5.1.1':
         else:
             self.log.debug("No CVMFS/site installation requested, not running post_easyblock_hook_copy_easybuild_subdir.")
 else:
-    print_msg(f"Not enabling the post_easybuild_hook, as it requires EasyBuild 5.1.1 or newer.")
+    print_warning(f"Not enabling the post_easybuild_hook, as it requires EasyBuild 5.1.1 or newer (you are using {EASYBUILD_VERSION}).")
 
 
 PARSE_HOOKS = {
