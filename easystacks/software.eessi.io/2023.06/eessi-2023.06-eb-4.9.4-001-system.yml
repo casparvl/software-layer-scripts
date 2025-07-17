@@ -1,4 +1,0 @@
-easyconfigs:
-  - cowsay-3.04.eb:
-      options:
-        try-software-version: 999
