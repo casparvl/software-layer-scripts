@@ -2,14 +2,14 @@
 export LMOD_PAGER=cat
 
 if [ -z ${EESSI_VERSION} ] || [ ! -d /cvmfs/software.eessi.io/versions/${EESSI_VERSION} ]; then
-    echo "\$EESSI_VERSION has to be set to a valid EESSI version."
-    exit 1
+	echo "\$EESSI_VERSION has to be set to a valid EESSI version."
+	exit 1
 fi
 
-declare -A EXPECTED_EASYBUILD_VERSION_IN_EESSI=(
-    ["2023.06"]="5.1.1"
-    ["2025.06"]="5.1.1"
-)
+if [ -z ${EXPECTED_EASYBUILD_VERSION} ]; then
+	echo "\$EXPECTED_EASYBUILD_VERSION has to be set to an EasyBuild version that is expected to be available in EESSI version ${EESSI_VERSION}."
+	exit 1
+fi
 
 # initialize assert framework
 if [ ! -d assert.sh ]; then
@@ -40,14 +40,13 @@ for shell in ${SHELLS[@]}; do
 		# TEST 3: Check if module overviews second section is the EESSI init module
 		assert "echo ${MODULE_SECTIONS[4]}" "/cvmfs/software.eessi.io/versions/$EESSI_VERSION/init/modules"
 		# Test 4: Load EasyBuild module and check version
-                EASYBUILD_VERSION=${EXPECTED_EASYBUILD_VERSION_IN_EESSI[${EESSI_VERSION}]}
-                # eb --version outputs: "This is EasyBuild 5.1.1 (framework: 5.1.1, easyblocks: 5.1.1) on host ..."
-		command="$shell -c 'source init/lmod/$shell 2>/dev/null; module load EasyBuild/${EASYBUILD_VERSION}; eb --version | cut -d \" \" -f4'"
-		assert "$command" "$EASYBUILD_VERSION"
+		# eb --version outputs: "This is EasyBuild 5.1.1 (framework: 5.1.1, easyblocks: 5.1.1) on host ..."
+		command="$shell -c 'source init/lmod/$shell 2>/dev/null; module load EasyBuild/${EXPECTED_EASYBUILD_VERSION}; eb --version | cut -d \" \" -f4'"
+		assert "$command" "$EXPECTED_EASYBUILD_VERSION"
 		# Test 5: Load EasyBuild module and check path
-		EASYBUILD_PATH=$($shell -c "source init/lmod/$shell 2>/dev/null; module load EasyBuild/${EASYBUILD_VERSION}; which eb")
+		EASYBUILD_PATH=$($shell -c "source init/lmod/$shell 2>/dev/null; module load EasyBuild/${EXPECTED_EASYBUILD_VERSION}; which eb")
 		# escape the dots in ${EASYBUILD_VERSION}
-		PATTERN="/cvmfs/software\.eessi\.io/versions/$EESSI_VERSION/software/linux/x86_64/(intel/haswell|amd/zen3)/software/EasyBuild/${EASYBUILD_VERSION//./\\.}/bin/eb"
+		PATTERN="/cvmfs/software\.eessi\.io/versions/$EESSI_VERSION/software/linux/x86_64/(intel/haswell|amd/zen3)/software/EasyBuild/${EXPECTED_EASYBUILD_VERSION//./\\.}/bin/eb"
 		echo "$EASYBUILD_PATH" | grep -E "$PATTERN"
 		assert_raises 'echo "$EASYBUILD_PATH" | grep -E "$PATTERN"'
 		
