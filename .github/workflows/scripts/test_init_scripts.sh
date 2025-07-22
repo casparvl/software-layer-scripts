@@ -1,6 +1,10 @@
 #!/bin/bash
-EESSI_VERSION="2023.06"
 export LMOD_PAGER=cat
+
+if [ -z ${EESSI_VERSION} ] || [ ! -d /cvmfs/software.eessi.io/versions/${EESSI_VERSION} ]; then
+    echo "\$EESSI_VERSION has to be set to a valid EESSI version."
+    exit 1
+fi
 
 # initialize assert framework
 if [ ! -d assert.sh ]; then
