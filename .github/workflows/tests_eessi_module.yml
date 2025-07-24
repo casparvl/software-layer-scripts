@@ -310,5 +310,5 @@ jobs:
           # Lmod is automatically replacing "..." with "...".
           export EESSI_MODULE_FAMILY_NAME=${FAMILY}
           module load "EESSI/${{matrix.EESSI_VERSION}}"
-          GREP_PATTERN="Lmod is automatically replacing \"EESSI/${{matrix.EESSI_VERSION}}" with \"${LOCAL_STACK_NAME}/${LOCAL_STACK_VERSION}\"."
+          GREP_PATTERN="Lmod is automatically replacing \"EESSI/${{matrix.EESSI_VERSION}}\" with \"${LOCAL_STACK_NAME}/${LOCAL_STACK_VERSION}\"."
           module load "${LOCAL_STACK_NAME}/${LOCAL_STACK_VERSION}" |& grep "${GREP_PATTERN}"
