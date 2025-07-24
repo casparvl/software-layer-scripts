@@ -177,7 +177,7 @@ end
 load_message = "Module for EESSI/" .. eessi_version .. " loaded successfully"
 if os.getenv("EESSI_MODULE_STICKY") then
     add_property("lmod","sticky")
-    load_message += " (requires '--force' option to unload or purge)"
+    load_message = load_message .. " (requires '--force' option to unload or purge)"
 end
 
 if mode() == "load" then
