@@ -255,10 +255,17 @@ jobs:
               
       - name: Make sure we have a sticky EESSI module
         run: |
-          # Set the relevant environment variable and load the EESSI module via Lmod initialisation
-          export EESSI_MODULE_STICKY=1
+          # Initialise Lmod
           . /cvmfs/software.eessi.io/versions/${{matrix.EESSI_VERSION}}/compat/linux/$(uname -m)/usr/share/Lmod/init/bash
           
-          # Purge the environment and check if EESSI is still loaded
+          # Make sure we using the module file from the repository
+          export MODULEPATH=init/modules
+          
+          # Set the relevant environment variable and load the EESSI module
+          export EESSI_MODULE_STICKY=1
+          module load "EESSI/${{matrix.EESSI_VERSION}}"
+          module list |& grep "EESSI/${{matrix.EESSI_VERSION}}"
+          
+          # Purge and check the module is still loaded
           module purge
           module list |& grep "EESSI/${{matrix.EESSI_VERSION}}"
