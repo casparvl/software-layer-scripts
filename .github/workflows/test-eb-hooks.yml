@@ -1,5 +1,5 @@
 # documentation: https://help.github.com/en/articles/workflow-syntax-for-github-actions
-name: Check whether eb_hooks.py script is up-to-date
+name: Run checks on EasyBuild hooks script
 on:
   push:
   pull_request:
@@ -7,27 +7,17 @@ on:
 permissions:
   contents: read # to fetch code (actions/checkout)
 jobs:
-  check_eb_hooks:
+  check_eb_hooks_uptodate:
     runs-on: ubuntu-24.04
     strategy:
       matrix:
         EESSI_VERSION:
           - '2023.06'
           - '2025.06'
-        include:
-          # For each EESSI version we need to test different modules
-          - EESSI_VERSION: '2023.06'
-            COMPATIBLE_EASYCONFIG: 'M4-1.4.19-GCCcore-13.2.0.eb'
-            INCOMPATIBLE_EASYCONFIG: 'M4-1.4.19-GCCcore-14.2.0.eb'
-          - EESSI_VERSION: '2025.06'
-            COMPATIBLE_EASYCONFIG: 'M4-1.4.19-GCCcore-14.2.0.eb'
-            INCOMPATIBLE_EASYCONFIG: 'M4-1.4.19-GCCcore-13.2.0.eb'
 
     steps:
         - name: Check out software-layer repository
           uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
-          with:
-              fetch-depth: 0  # Fetch all history for all branches and tags
 
         - name: Mount EESSI CernVM-FS repository
           uses: eessi/github-action-eessi@v3
@@ -35,26 +25,7 @@ jobs:
             eessi_stack_version: ${{matrix.EESSI_VERSION}}
             use_eessi_module: true
 
-        - name: Test that toolchain verification check works
-          if: ${{ github.event_name == 'pull_request' }}
-          run: |
-              # Set up some environment variables
-              export COMPATIBLE_EASYCONFIG=${{matrix.COMPATIBLE_EASYCONFIG}}
-              export INCOMPATIBLE_EASYCONFIG=${{matrix.INCOMPATIBLE_EASYCONFIG}}
-
-              # Load specific EESSI-extend vertsion (proxies a version check)
-              module load EESSI-extend/${{matrix.EESSI_VERSION}}-easybuild
-
-              # Test an easyconfig that should work
-              eb --hooks=$PWD/eb_hooks.py "$COMPATIBLE_EASYCONFIG" --stop fetch
-
-              # Pick an outdated toolchain for the negative test
-              eb --hooks=$PWD/eb_hooks.py "$INCOMPATIBLE_EASYCONFIG" --stop fetch 2>&1 1>/dev/null | grep -q "not supported in EESSI"
-
-              # Check the override works
-              EESSI_OVERRIDE_TOOLCHAIN_CHECK=1 eb --hooks=$PWD/eb_hooks.py "$INCOMPATIBLE_EASYCONFIG" --stop fetch
-
-        - name: Check that EasyBuild hook is up to date
+        - name: Check whether eb_hooks.py script is up-to-date
           if: ${{ github.event_name == 'pull_request' }}
           run: |
               FILE="eb_hooks.py"
@@ -78,3 +49,48 @@ jobs:
               # Compare the hooks to what is shipped in the repository
               module load EESSI-extend
               diff "$TEMP_FILE" "$EASYBUILD_HOOKS"
+
+  check_eb_hooks_functionality:
+    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        EESSI_VERSION:
+          - '2023.06'
+          - '2025.06'
+        include:
+          # For each EESSI version we need to test different modules
+          - EESSI_VERSION: '2023.06'
+            COMPATIBLE_EASYCONFIG: 'M4-1.4.19-GCCcore-13.2.0.eb'
+            INCOMPATIBLE_EASYCONFIG: 'M4-1.4.19-GCCcore-14.2.0.eb'
+          - EESSI_VERSION: '2025.06'
+            COMPATIBLE_EASYCONFIG: 'M4-1.4.19-GCCcore-14.2.0.eb'
+            INCOMPATIBLE_EASYCONFIG: 'M4-1.4.19-GCCcore-13.2.0.eb'
+
+    steps:
+        - name: Check out software-layer repository
+          uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+
+        - name: Mount EESSI CernVM-FS repository
+          uses: eessi/github-action-eessi@v3
+          with:
+            eessi_stack_version: ${{matrix.EESSI_VERSION}}
+            use_eessi_module: true
+
+        - name: Test that hook toolchain verification check works
+          if: ${{ github.event_name == 'pull_request' }}
+          run: |
+              # Set up some environment variables
+              export COMPATIBLE_EASYCONFIG=${{matrix.COMPATIBLE_EASYCONFIG}}
+              export INCOMPATIBLE_EASYCONFIG=${{matrix.INCOMPATIBLE_EASYCONFIG}}
+
+              # Load specific EESSI-extend vertsion (proxies a version check)
+              module load EESSI-extend/${{matrix.EESSI_VERSION}}-easybuild
+
+              # Test an easyconfig that should work
+              eb --hooks=$PWD/eb_hooks.py "$COMPATIBLE_EASYCONFIG" --stop fetch
+
+              # Pick an outdated toolchain for the negative test
+              eb --hooks=$PWD/eb_hooks.py "$INCOMPATIBLE_EASYCONFIG" --stop fetch 2>&1 1>/dev/null | grep -q "not supported in EESSI"
+
+              # Check the override works
+              EESSI_OVERRIDE_TOOLCHAIN_CHECK=1 eb --hooks=$PWD/eb_hooks.py "$INCOMPATIBLE_EASYCONFIG" --stop fetch
