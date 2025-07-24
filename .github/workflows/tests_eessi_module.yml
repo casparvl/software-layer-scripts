@@ -303,7 +303,7 @@ jobs:
           mkdir -p "${TMP_MODULEFILES}/${LOCAL_STACK_NAME}"
           echo "family(\"${FAMILY}\")" > "${TMP_MODULEFILES}/${LOCAL_STACK_NAME}/${LOCAL_STACK_VERSION}.lua"
 
-          # Make sure we are using the EESSImodule file from the repository and the temporary one for the dummy local stack
+          # Make sure we are using the EESSI module file from the repository and the temporary one for the dummy local stack
           export MODULEPATH=init/modules:${TMP_MODULEFILES}
 
           # Set the relevant environment variable, load the EESSI module and the local stack module, and grep for
