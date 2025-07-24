@@ -35,6 +35,25 @@ jobs:
             eessi_stack_version: ${{matrix.EESSI_VERSION}}
             use_eessi_module: true
 
+        - name: Test that toolchain verification check works
+          if: ${{ github.event_name == 'pull_request' }}
+          run: |
+              # Set up some environment variables
+              export COMPATIBLE_EASYCONFIG=${{matrix.COMPATIBLE_EASYCONFIG}}
+              export INCOMPATIBLE_EASYCONFIG=${{matrix.INCOMPATIBLE_EASYCONFIG}}
+
+              # Load specific EESSI-extend vertsion (proxies a version check)
+              module load EESSI-extend/${{matrix.EESSI_VERSION}}-easybuild
+
+              # Test an easyconfig that should work
+              eb --hooks=$PWD/eb_hooks.py "$COMPATIBLE_EASYCONFIG" --stop fetch
+
+              # Pick an outdated toolchain for the negative test
+              eb --hooks=$PWD/eb_hooks.py "$INCOMPATIBLE_EASYCONFIG" --stop fetch 2>&1 1>/dev/null | grep -q "not supported in EESSI"
+
+              # Check the override works
+              EESSI_OVERRIDE_TOOLCHAIN_CHECK=1 eb --hooks=$PWD/eb_hooks.py "$INCOMPATIBLE_EASYCONFIG" --stop fetch
+
         - name: Check that EasyBuild hook is up to date
           if: ${{ github.event_name == 'pull_request' }}
           run: |
@@ -59,22 +78,3 @@ jobs:
               # Compare the hooks to what is shipped in the repository
               module load EESSI-extend
               diff "$TEMP_FILE" "$EASYBUILD_HOOKS"
-
-        - name: Test that toolchain verification check works
-          if: ${{ github.event_name == 'pull_request' }}
-          run: |
-              # Set up some environment variables
-              export COMPATIBLE_EASYCONFIG=${{matrix.COMPATIBLE_EASYCONFIG}}
-              export INCOMPATIBLE_EASYCONFIG=${{matrix.INCOMPATIBLE_EASYCONFIG}}
-
-              # Load specific EESSI-extend vertsion (proxies a version check)
-              module load EESSI-extend/${{matrix.EESSI_VERSION}}-easybuild
-
-              # Test an easyconfig that should work
-              eb --hooks=$PWD/eb_hooks.py "$COMPATIBLE_EASYCONFIG" --stop fetch
-
-              # Pick an outdated toolchain for the negative test
-              eb --hooks=$PWD/eb_hooks.py "$INCOMPATIBLE_EASYCONFIG" --stop fetch 2>&1 1>/dev/null | grep -q "not supported in EESSI"
-
-              # Check the override works
-              EESSI_OVERRIDE_TOOLCHAIN_CHECK=1 eb --hooks=$PWD/eb_hooks.py "$INCOMPATIBLE_EASYCONFIG" --stop fetch
