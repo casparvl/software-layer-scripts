@@ -172,6 +172,14 @@ if isDir(eessi_module_path_accel) then
     prepend_path("MODULEPATH", eessi_module_path_site_accel)
     eessiDebug("Using site accelerator modules at: " .. eessi_module_path_site_accel)
 end
+
+-- allow sites to make the EESSI module sticky by defining EESSI_MODULE_STICKY (to any value)
+load_message = "Module for EESSI/" .. eessi_version .. " loaded successfully"
+if os.getenv("EESSI_MODULE_STICKY") then
+    add_property("lmod","sticky")
+    load_message += " (requires '--force' option to unload or purge)"
+end
+
 if mode() == "load" then
-    LmodMessage("EESSI/" .. eessi_version .. " loaded successfully")
+    LmodMessage(load_message)
 end
