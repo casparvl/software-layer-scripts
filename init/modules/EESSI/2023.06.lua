@@ -173,6 +173,13 @@ if isDir(eessi_module_path_accel) then
     eessiDebug("Using site accelerator modules at: " .. eessi_module_path_site_accel)
 end
 
+-- allow sites to add a family directive to the EESSI module,
+-- e.g. for preventing that users load two different/incompatible stacks at the same time
+family_name = os.getenv("EESSI_MODULE_FAMILY_NAME")
+if family_name then
+    family(family_name)
+end
+
 -- allow sites to make the EESSI module sticky by defining EESSI_MODULE_STICKY (to any value)
 load_message = "Module for EESSI/" .. eessi_version .. " loaded successfully"
 if os.getenv("EESSI_MODULE_STICKY") then
