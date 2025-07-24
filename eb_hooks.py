@@ -8,6 +8,7 @@ import re
 import easybuild.tools.environment as env
 from easybuild.easyblocks.generic.configuremake import obtain_config_guess
 from easybuild.framework.easyconfig.constants import EASYCONFIG_CONSTANTS
+from easybuild.framework.easyconfig.easyconfig import get_toolchain_hierarchy
 from easybuild.tools import config
 from easybuild.tools.build_log import EasyBuildError, print_msg, print_warning
 from easybuild.tools.config import build_option, install_path, update_build_option
@@ -15,6 +16,7 @@ from easybuild.tools.filetools import apply_regex_substitutions, copy_dir, copy_
 from easybuild.tools.run import run_cmd
 from easybuild.tools.systemtools import AARCH64, POWER, X86_64, get_cpu_architecture, get_cpu_features
 from easybuild.tools.toolchain.compiler import OPTARCH_GENERIC
+from easybuild.tools.toolchain.toolchain import is_system_toolchain
 from easybuild.tools.version import VERSION as EASYBUILD_VERSION
 from easybuild.tools.modules import get_software_root_env_var_name
 
@@ -49,6 +51,18 @@ HOST_INJECTIONS_LOCATION = "/cvmfs/software.eessi.io/host_injections/"
 EESSI_IGNORE_ZEN4_GCC1220_ENVVAR="EESSI_IGNORE_LMOD_ERROR_ZEN4_GCC1220"
 
 STACK_REPROD_SUBDIR = 'reprod'
+
+EESSI_SUPPORTED_TOP_LEVEL_TOOLCHAINS = {
+    '2023.06': [
+        {'name': 'foss', 'version': '2022b'},
+        {'name': 'foss', 'version': '2023a'},
+        {'name': 'foss', 'version': '2023b'},
+    ],
+    '2025.06': [
+        {'name': 'foss', 'version': '2024a'},
+        {'name': 'foss', 'version': '2025a'},
+    ],
+}
 
 
 def is_gcccore_1220_based(**kwargs):
@@ -128,6 +142,34 @@ def parse_hook(ec, *args, **kwargs):
     ec = inject_gpu_property(ec)
 
 
+def verify_toolchains_supported_by_eessi_version(easyconfigs):
+    """Each EESSI version supports a limited set of toolchains, sanity check the easyconfigs for toolchain support."""
+    eessi_version = get_eessi_envvar('EESSI_VERSION')
+    supported_eessi_toolchains = []
+    for top_level_toolchain in EESSI_SUPPORTED_TOP_LEVEL_TOOLCHAINS[eessi_version]:
+        supported_eessi_toolchains += get_toolchain_hierarchy(top_level_toolchain)
+    for ec in easyconfigs:
+        toolchain = ec['ec']['toolchain']
+        # if it is a system toolchain or appears in the list, we are all good
+        if is_system_toolchain(toolchain['name']):
+            continue
+        elif not any(toolchain.items() <= supported.items() for supported in supported_eessi_toolchains):
+            raise EasyBuildError(
+                f"Toolchain {toolchain} (required by {ec['full_mod_name']}) is not supported in EESSI/{eessi_version}\n"
+                f"Supported toolchains are:\n" + "\n".join(sorted("  " + str(tc) for tc in supported_eessi_toolchains))
+            )
+
+
+def pre_build_and_install_loop_hook(easyconfigs):
+    """Main pre_build_and_install_loop hook: trigger custom functions before beginning installation loop."""
+
+    # Always check that toolchain supported by the EESSI version (unless overridden)
+    if os.getenv("EESSI_OVERRIDE_TOOLCHAIN_CHECK"):
+        print_warning("Overriding the check that the toolchains are supported by the EESSI version.")
+    else:
+        verify_toolchains_supported_by_eessi_version(easyconfigs)
+
+
 def post_ready_hook(self, *args, **kwargs):
     """
     Post-ready hook: limit parallellism for selected builds based on software name and CPU target.
@@ -135,7 +177,10 @@ def post_ready_hook(self, *args, **kwargs):
     """
     # 'parallel' easyconfig parameter (EB4) or the parallel property (EB5) is set via EasyBlock.set_parallel
     # in ready step based on available cores
-    parallel = getattr(self, 'parallel', self.cfg['parallel'])
+    if hasattr(self, 'parallel'):
+        parallel = self.parallel
+    else:
+        parallel = self.cfg['parallel']
     
     if parallel == 1:
         return  # no need to limit if already using 1 core
@@ -167,8 +212,8 @@ def post_ready_hook(self, *args, **kwargs):
 
     # apply the limit if it's different from current
     if new_parallel != parallel:
-        if EASYBUILD_VERSION >= '5':
-            self.cfg.parallel = new_parallel
+        if hasattr(self, 'parallel'):
+            self.parallel = new_parallel
         else:
             self.cfg['parallel'] = new_parallel
         msg = "limiting parallelism to %s (was %s) for %s on %s to avoid out-of-memory failures during building/testing"
@@ -394,7 +439,7 @@ def parse_hook_freeimage_aarch64(ec, *args, **kwargs):
     https://github.com/EESSI/software-layer/pull/736#issuecomment-2373261889
     """
     if ec.name == 'FreeImage' and ec.version in ('3.18.0',):
-        if os.getenv('EESSI_CPU_FAMILY') == 'aarch64':
+        if get_eessi_envvar('EESSI_CPU_FAMILY') == 'aarch64':
             # Make sure the toolchainopts key exists, and the value is a dict,
             # before we add the option to enable PIC and disable PNG_ARM_NEON_OPT
             if 'toolchainopts' not in ec or ec['toolchainopts'] is None:
@@ -1230,7 +1275,7 @@ def replace_non_distributable_files_with_symlinks(log, install_dir, pkg_name, al
                     # CUDA and cu* libraries themselves don't care about compute capability so remove this
                     # duplication from under host_injections (symlink to a single CUDA or cu* library
                     # installation for all compute capabilities)
-                    accel_subdir = os.getenv("EESSI_ACCELERATOR_TARGET")
+                    accel_subdir = get_eessi_envvar("EESSI_ACCELERATOR_TARGET")
                     if accel_subdir:
                         host_inj_path = host_inj_path.replace("/accel/%s" % accel_subdir, '')
                     # make sure source and target of symlink are not the same
@@ -1326,7 +1371,7 @@ if EASYBUILD_VERSION >= '5.1.1':
 
         # Always trigger this one for EESSI CVMFS/site installations and version 2025.06 or newer, regardless of self.name
         if os.getenv('EESSI_CVMFS_INSTALL') or os.getenv('EESSI_SITE_INSTALL'):
-            if os.getenv('EESSI_VERSION') and LooseVersion(os.getenv('EESSI_VERSION')) >= '2025.06':
+            if get_eessi_envvar('EESSI_VERSION') and LooseVersion(get_eessi_envvar('EESSI_VERSION')) >= '2025.06':
                 post_easyblock_hook_copy_easybuild_subdir(self, *args, **kwargs)
         else:
             self.log.debug("No CVMFS/site installation requested, not running post_easyblock_hook_copy_easybuild_subdir.")
