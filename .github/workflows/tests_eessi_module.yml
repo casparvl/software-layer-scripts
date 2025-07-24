@@ -301,7 +301,7 @@ jobs:
           LOCAL_STACK_NAME="local_stack"
           LOCAL_STACK_VERSION="${{matrix.EESSI_VERSION}}"
           mkdir -p "${TMP_MODULEFILES}/${LOCAL_STACK_NAME}"
-          echo "family(\"${FAMILY}\")" > "${TMP_MODULEFILES}/${LOCAL_STACK_NAME}/${LOCAL_STACK_VERSION}"
+          echo "family(\"${FAMILY}\")" > "${TMP_MODULEFILES}/${LOCAL_STACK_NAME}/${LOCAL_STACK_VERSION}.lua"
 
           # Make sure we are using the EESSImodule file from the repository and the temporary one for the dummy local stack
           export MODULEPATH=init/modules:${TMP_MODULEFILES}
