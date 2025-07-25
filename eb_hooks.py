@@ -165,7 +165,9 @@ def verify_toolchains_supported_by_eessi_version(easyconfigs):
     """Each EESSI version supports a limited set of toolchains, sanity check the easyconfigs for toolchain support."""
     eessi_version = get_eessi_envvar('EESSI_VERSION')
     supported_eessi_toolchains = []
-    site_top_level_toolchains = parse_list_of_dicts_env('EESSI_SITE_TOP_LEVEL_TOOLCHAINS_' + eessi_version)
+    # Environment variable can't have a '.' so replace by '_'
+    site_top_level_toolchains_envvar = 'EESSI_SITE_TOP_LEVEL_TOOLCHAINS_' + eessi_version.replace('.', '_')
+    site_top_level_toolchains = parse_list_of_dicts_env(site_top_level_toolchains_envvar)
     for top_level_toolchain in EESSI_SUPPORTED_TOP_LEVEL_TOOLCHAINS[eessi_version] + site_top_level_toolchains:
         supported_eessi_toolchains += get_toolchain_hierarchy(top_level_toolchain)
     for ec in easyconfigs:

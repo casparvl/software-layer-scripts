@@ -64,12 +64,14 @@ jobs:
             COMPATIBLE_EASYCONFIG: 'M4-1.4.19-GCCcore-13.2.0.eb'
             INCOMPATIBLE_EASYCONFIG: 'M4-1.4.19-GCCcore-14.2.0.eb'
             # Pick a site toolchain that will allow the incompatible easyconfig
-            EESSI_SITE_TOP_LEVEL_TOOLCHAINS: '[{"name": "GCCcore", "version": "14.2.0"}]'
+            # (the name will be modified when exported)
+            SITE_TOP_LEVEL_TOOLCHAINS: '[{"name": "GCCcore", "version": "14.2.0"}]'
           - EESSI_VERSION: '2025.06'
             COMPATIBLE_EASYCONFIG: 'M4-1.4.19-GCCcore-14.2.0.eb'
             INCOMPATIBLE_EASYCONFIG: 'M4-1.4.19-GCCcore-13.2.0.eb'
             # Pick a site toolchain that will allow the incompatible easyconfig
-            EESSI_SITE_TOP_LEVEL_TOOLCHAINS: '[{"name": "GCCcore", "version": "13.2.0"}]'
+            # (the name will be modified when exported)
+            SITE_TOP_LEVEL_TOOLCHAINS: '[{"name": "GCCcore", "version": "13.2.0"}]'
 
     steps:
         - name: Check out software-layer repository
@@ -104,12 +106,13 @@ jobs:
               echo "Hook ignored via EESSI_OVERRIDE_TOOLCHAIN_CHECK with easyconfig $INCOMPATIBLE_EASYCONFIG and EESSI/${{matrix.EESSI_VERSION}}"
 
               # Now check if we can set a site list of supported toolchains
-              export EESSI_SITE_TOP_LEVEL_TOOLCHAINS_"${{matrix.EESSI_VERSION}}"='${{matrix.EESSI_SITE_TOP_LEVEL_TOOLCHAINS}}'
+              export SANITIZED_EESSI_VERSION=$(echo "${{ matrix.EESSI_VERSION }}" | sed 's/\./_/g')
+              export EESSI_SITE_TOP_LEVEL_TOOLCHAINS_"$SANITIZED_EESSI_VERSION"='${{matrix.SITE_TOP_LEVEL_TOOLCHAINS}}'
               eb --hooks=$PWD/eb_hooks.py "$INCOMPATIBLE_EASYCONFIG" --stop fetch
               echo "Site supported toolchain $EESSI_SITE_TOP_LEVEL_TOOLCHAINS successfully used with easyconfig $INCOMPATIBLE_EASYCONFIG and EESSI/${{matrix.EESSI_VERSION}}"
 
               # Make sure an invalid list of dicts fails
-              export EESSI_SITE_TOP_LEVEL_TOOLCHAINS_"${{matrix.EESSI_VERSION}}"="Not a list of dicts"
+              export EESSI_SITE_TOP_LEVEL_TOOLCHAINS_"$SANITIZED_EESSI_VERSION"="Not a list of dicts"
               eb --hooks=$PWD/eb_hooks.py "$INCOMPATIBLE_EASYCONFIG" --stop fetch 2>&1 1>/dev/null | grep -q "does not contain a valid list of dictionaries"
               echo "Incorrect format for EESSI_SITE_TOP_LEVEL_TOOLCHAINS caught"
 
