@@ -145,6 +145,11 @@ def parse_hook(ec, *args, **kwargs):
 
 
 def parse_list_of_dicts_env(var_name):
+    """Parse a list of dicts that are stored in an environment variable string"""
+
+    # Check if the environment variable name is valid (letters, numbers, underscores, and doesn't start with a digit)
+    if not re.match(r'^[A-Za-z_][A-Za-z0-9_]*$', var_name):
+        raise ValueError(f"Invalid environment variable name: {var_name}")
     list_string = os.getenv(var_name, '[]')
     
     list_of_dicts = []
