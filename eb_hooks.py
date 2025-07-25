@@ -180,6 +180,9 @@ def verify_toolchains_supported_by_eessi_version(easyconfigs):
         # if it is a system toolchain or appears in the list, we are all good
         if is_system_toolchain(toolchain['name']):
             continue
+        # This check verifies that the toolchain dict is in the list of supported toolchains.
+        # It uses <= as there may be other dict entries in the values returned from get_toolchain_hierarchy()
+        # but we only care that the toolchain dict (which has 'name' and 'version') appear.
         elif not any(toolchain.items() <= supported.items() for supported in supported_eessi_toolchains):
             raise EasyBuildError(
                 f"Toolchain {toolchain} (required by {ec['full_mod_name']}) is not supported in EESSI/{eessi_version}\n"
