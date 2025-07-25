@@ -97,7 +97,7 @@ jobs:
               eb --hooks=$PWD/eb_hooks.py "$COMPATIBLE_EASYCONFIG" --stop fetch
               echo "Success for hook with easyconfig $COMPATIBLE_EASYCONFIG with EESSI/${{matrix.EESSI_VERSION}}"
 
-              # Pick an outdated toolchain for the negative test
+              # Now ensure an incompatible easyconfig does not work
               eb --hooks=$PWD/eb_hooks.py "$INCOMPATIBLE_EASYCONFIG" --stop fetch 2>&1 1>/dev/null | grep -q "not supported in EESSI"
               echo "Found expected failure for hook with easyconfig $INCOMPATIBLE_EASYCONFIG and EESSI/${{matrix.EESSI_VERSION}}"
 
@@ -109,7 +109,7 @@ jobs:
               export SANITIZED_EESSI_VERSION=$(echo "${{ matrix.EESSI_VERSION }}" | sed 's/\./_/g')
               export EESSI_SITE_TOP_LEVEL_TOOLCHAINS_"$SANITIZED_EESSI_VERSION"='${{matrix.SITE_TOP_LEVEL_TOOLCHAINS}}'
               eb --hooks=$PWD/eb_hooks.py "$INCOMPATIBLE_EASYCONFIG" --stop fetch
-              echo "Site supported toolchain $EESSI_SITE_TOP_LEVEL_TOOLCHAINS successfully used with easyconfig $INCOMPATIBLE_EASYCONFIG and EESSI/${{matrix.EESSI_VERSION}}"
+              echo "Site supported toolchain from $EESSI_SITE_TOP_LEVEL_TOOLCHAINS successfully used with easyconfig $INCOMPATIBLE_EASYCONFIG and EESSI/${{matrix.EESSI_VERSION}}"
 
               # Make sure an invalid list of dicts fails
               export EESSI_SITE_TOP_LEVEL_TOOLCHAINS_"$SANITIZED_EESSI_VERSION"="Not a list of dicts"
