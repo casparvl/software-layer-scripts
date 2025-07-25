@@ -240,7 +240,7 @@ def post_ready_hook(self, *args, **kwargs):
     # apply the limit if it's different from current
     if new_parallel != parallel:
         if hasattr(self, 'parallel'):
-            self.parallel = new_parallel
+            self.cfg.parallel = new_parallel
         else:
             self.cfg['parallel'] = new_parallel
         msg = "limiting parallelism to %s (was %s) for %s on %s to avoid out-of-memory failures during building/testing"
