@@ -23,7 +23,7 @@ for shell in ${SHELLS[@]}; do
 		echo -e "\033[33mWe don't now how to test the shell '$shell', PRs are Welcome.\033[0m" 
   else
 		# TEST 1: Source Script and check Module Output
-		assert "$shell -c 'source init/lmod/$shell' 2>&1 " "EESSI/$EESSI_VERSION loaded successfully"
+		assert "$shell -c 'source init/lmod/$shell' 2>&1 " "Module for EESSI/$EESSI_VERSION loaded successfully"
 		# TEST 2: Check if module overviews first section is the loaded EESSI module
 		MODULE_SECTIONS=($($shell -c "source init/lmod/$shell 2>/dev/null; module ov 2>&1 | grep -e '---'"))
 		PATTERN="/cvmfs/software\.eessi\.io/versions/$EESSI_VERSION/software/linux/x86_64/(intel/haswell|amd/zen3)/modules/all"
