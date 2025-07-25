@@ -69,7 +69,7 @@ jobs:
             COMPATIBLE_EASYCONFIG: 'M4-1.4.19-GCCcore-14.2.0.eb'
             INCOMPATIBLE_EASYCONFIG: 'M4-1.4.19-GCCcore-13.2.0.eb'
             # Pick a site toolchain that will allow the incompatible easyconfig
-            EESSI_SITE_TOP_LEVEL_TOOLCHAINS: '[{"GCCcore": "13.2.0"}]'
+            EESSI_SITE_TOP_LEVEL_TOOLCHAINS: '[{"name": "GCCcore", "version": "13.2.0"}]'
 
     steps:
         - name: Check out software-layer repository
