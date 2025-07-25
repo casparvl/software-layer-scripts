@@ -104,7 +104,7 @@ jobs:
               echo "Hook ignored via EESSI_OVERRIDE_TOOLCHAIN_CHECK with easyconfig $INCOMPATIBLE_EASYCONFIG and EESSI/${{matrix.EESSI_VERSION}}"
 
               # Now check if we can set a site list of supported toolchains
-              export EESSI_SITE_TOP_LEVEL_TOOLCHAINS=${{matrix.EESSI_SITE_TOP_LEVEL_TOOLCHAINS}}
+              export EESSI_SITE_TOP_LEVEL_TOOLCHAINS='${{matrix.EESSI_SITE_TOP_LEVEL_TOOLCHAINS}}'
               eb --hooks=$PWD/eb_hooks.py "$INCOMPATIBLE_EASYCONFIG" --stop fetch
               echo "Site supported toolchain $EESSI_SITE_TOP_LEVEL_TOOLCHAINS successfully used with easyconfig $INCOMPATIBLE_EASYCONFIG and EESSI/${{matrix.EESSI_VERSION}}"
 
