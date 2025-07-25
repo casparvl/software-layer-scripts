@@ -63,9 +63,13 @@ jobs:
           - EESSI_VERSION: '2023.06'
             COMPATIBLE_EASYCONFIG: 'M4-1.4.19-GCCcore-13.2.0.eb'
             INCOMPATIBLE_EASYCONFIG: 'M4-1.4.19-GCCcore-14.2.0.eb'
+            # Pick a site toolchain that will allow the incompatible easyconfig
+            EESSI_SITE_TOP_LEVEL_TOOLCHAINS: '[{"GCCcore": "14.2.0"}]'
           - EESSI_VERSION: '2025.06'
             COMPATIBLE_EASYCONFIG: 'M4-1.4.19-GCCcore-14.2.0.eb'
             INCOMPATIBLE_EASYCONFIG: 'M4-1.4.19-GCCcore-13.2.0.eb'
+            # Pick a site toolchain that will allow the incompatible easyconfig
+            EESSI_SITE_TOP_LEVEL_TOOLCHAINS: '[{"GCCcore": "13.2.0"}]'
 
     steps:
         - name: Check out software-layer repository
@@ -89,9 +93,23 @@ jobs:
 
               # Test an easyconfig that should work
               eb --hooks=$PWD/eb_hooks.py "$COMPATIBLE_EASYCONFIG" --stop fetch
+              echo "Success for hook with easyconfig $COMPATIBLE_EASYCONFIG with EESSI/${{matrix.EESSI_VERSION}}"
 
               # Pick an outdated toolchain for the negative test
               eb --hooks=$PWD/eb_hooks.py "$INCOMPATIBLE_EASYCONFIG" --stop fetch 2>&1 1>/dev/null | grep -q "not supported in EESSI"
+              echo "Found expected failure for hook with easyconfig $INCOMPATIBLE_EASYCONFIG and EESSI/${{matrix.EESSI_VERSION}}"
 
               # Check the override works
               EESSI_OVERRIDE_TOOLCHAIN_CHECK=1 eb --hooks=$PWD/eb_hooks.py "$INCOMPATIBLE_EASYCONFIG" --stop fetch
+              echo "Hook ignored via EESSI_OVERRIDE_TOOLCHAIN_CHECK with easyconfig $INCOMPATIBLE_EASYCONFIG and EESSI/${{matrix.EESSI_VERSION}}"
+
+              # Now check if we can set a site list of supported toolchains
+              export EESSI_SITE_TOP_LEVEL_TOOLCHAINS=${{matrix.EESSI_SITE_TOP_LEVEL_TOOLCHAINS}}
+              eb --hooks=$PWD/eb_hooks.py "$INCOMPATIBLE_EASYCONFIG" --stop fetch
+              echo "Site supported toolchain $EESSI_SITE_TOP_LEVEL_TOOLCHAINS successfully used with easyconfig $INCOMPATIBLE_EASYCONFIG and EESSI/${{matrix.EESSI_VERSION}}"
+
+              # Make sure an invalid list of dicts fails
+              export EESSI_SITE_TOP_LEVEL_TOOLCHAINS="Not a list of dicts"
+              eb --hooks=$PWD/eb_hooks.py "$INCOMPATIBLE_EASYCONFIG" --stop fetch 2>&1 1>/dev/null | grep -q "does not contain a valid list of dictionaries"
+              echo "Incorrect format for EESSI_SITE_TOP_LEVEL_TOOLCHAINS caught"
+

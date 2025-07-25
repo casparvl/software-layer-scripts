@@ -1,7 +1,9 @@
 # Hooks to customize how EasyBuild installs software in EESSI
 # see https://docs.easybuild.io/en/latest/Hooks.html
+import ast
 import datetime
 import glob
+import json
 import os
 import re
 
@@ -142,10 +144,27 @@ def parse_hook(ec, *args, **kwargs):
     ec = inject_gpu_property(ec)
 
 
+def parse_list_of_dicts_env(var_name):
+    list_string = os.getenv(var_name, '[]')
+    
+    list_of_dicts = []
+    try:
+        # Try JSON format first
+        list_of_dicts = json.loads(list_string)
+    except json.JSONDecodeError:
+        try:
+            # Fall back to Python literal format
+            list_of_dicts = ast.literal_eval(list_string)
+        except (ValueError, SyntaxError):
+            raise ValueError(f"Environment variable '{var_name}' does not contain a valid list of dictionaries.")
+    
+    return list_of_dicts
+
+
 def verify_toolchains_supported_by_eessi_version(easyconfigs):
     """Each EESSI version supports a limited set of toolchains, sanity check the easyconfigs for toolchain support."""
     eessi_version = get_eessi_envvar('EESSI_VERSION')
-    supported_eessi_toolchains = []
+    supported_eessi_toolchains = parse_list_of_dicts_env('EESSI_SITE_TOP_LEVEL_TOOLCHAINS')
     for top_level_toolchain in EESSI_SUPPORTED_TOP_LEVEL_TOOLCHAINS[eessi_version]:
         supported_eessi_toolchains += get_toolchain_hierarchy(top_level_toolchain)
     for ec in easyconfigs:
