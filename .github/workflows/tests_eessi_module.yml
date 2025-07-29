@@ -19,7 +19,7 @@ jobs:
       - name: Check out software-layer repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
 
-      - name: Mount EESSI CernVM-FS pilot repository
+      - name: Mount EESSI CernVM-FS repository
         uses: cvmfs-contrib/github-action-cvmfs@55899ca74cf78ab874bdf47f5a804e47c198743c # v4.0
         with:
           cvmfs_config_package: https://github.com/EESSI/filesystem-layer/releases/download/latest/cvmfs-config-eessi_latest_all.deb
@@ -43,7 +43,7 @@ jobs:
           env | grep LMOD
           module purge
           unset MODULEPATH
-    
+
       - name: Test for archdetect_cpu functionality with invalid path
         run: |
           # Initialise Lmod
@@ -83,7 +83,7 @@ jobs:
       - name: Check out software-layer repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
 
-      - name: Mount EESSI CernVM-FS pilot repository
+      - name: Mount EESSI CernVM-FS repository
         uses: cvmfs-contrib/github-action-cvmfs@55899ca74cf78ab874bdf47f5a804e47c198743c # v4.0
         with:
           cvmfs_config_package: https://github.com/EESSI/filesystem-layer/releases/download/latest/cvmfs-config-eessi_latest_all.deb
@@ -176,7 +176,7 @@ jobs:
       - name: Check out software-layer repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
           
-      - name: Mount EESSI CernVM-FS pilot repository
+      - name: Mount EESSI CernVM-FS repository
         uses: cvmfs-contrib/github-action-cvmfs@55899ca74cf78ab874bdf47f5a804e47c198743c # v4.0
         with:
           cvmfs_config_package: https://github.com/EESSI/filesystem-layer/releases/download/latest/cvmfs-config-eessi_latest_all.deb
@@ -235,3 +235,83 @@ jobs:
           # (script uses EESSI_SOFTWARE_SUBDIR_OVERRIDE and EESSI_ACCELERATOR_TARGET_OVERRIDE
           # as the starting point for the comparison)
           python .github/workflows/scripts/verify_eessi_environment.py
+
+  check_sticky_eessi_module:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        EESSI_VERSION:
+          - '2023.06'
+          - '2025.06'
+
+    steps:
+      - name: Check out software-layer repository
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+          
+      - name: Mount EESSI CernVM-FS repository
+        uses: cvmfs-contrib/github-action-cvmfs@55899ca74cf78ab874bdf47f5a804e47c198743c # v4.0
+        with:
+          cvmfs_config_package: https://github.com/EESSI/filesystem-layer/releases/download/latest/cvmfs-config-eessi_latest_all.deb
+          cvmfs_http_proxy: DIRECT
+          cvmfs_repositories: software.eessi.io
+              
+      - name: Make sure we have a sticky EESSI module
+        run: |
+          # Initialise Lmod
+          . /cvmfs/software.eessi.io/versions/${{matrix.EESSI_VERSION}}/compat/linux/$(uname -m)/usr/share/Lmod/init/bash
+          
+          # Make sure we are using the module file from the repository
+          export MODULEPATH=init/modules
+          
+          # Set the relevant environment variable and load the EESSI module
+          export EESSI_MODULE_STICKY=1
+          module load "EESSI/${{matrix.EESSI_VERSION}}"
+          module list |& grep "EESSI/${{matrix.EESSI_VERSION}}"
+          
+          # Purge and check the module is still loaded
+          module purge
+          module list |& grep "EESSI/${{matrix.EESSI_VERSION}}"
+
+  check_family_eessi_module:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        EESSI_VERSION:
+          - '2023.06'
+          - '2025.06'
+
+    steps:
+      - name: Check out software-layer repository
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+
+      - name: Mount EESSI CernVM-FS repository
+        uses: cvmfs-contrib/github-action-cvmfs@55899ca74cf78ab874bdf47f5a804e47c198743c # v4.0
+        with:
+          cvmfs_config_package: https://github.com/EESSI/filesystem-layer/releases/download/latest/cvmfs-config-eessi_latest_all.deb
+          cvmfs_http_proxy: DIRECT
+          cvmfs_repositories: software.eessi.io
+
+      - name: Make sure we can use the family directive in the EESSI module
+        run: |
+          # Initialise Lmod
+          . /cvmfs/software.eessi.io/versions/${{matrix.EESSI_VERSION}}/compat/linux/$(uname -m)/usr/share/Lmod/init/bash
+
+          # Add a test modulefile for a dummy stack with a "software_stack" family directive
+          FAMILY=software_stack
+          TMP_MODULEFILES=$(mktemp -d)
+          LOCAL_STACK_NAME="local_stack"
+          LOCAL_STACK_VERSION="${{matrix.EESSI_VERSION}}"
+          mkdir -p "${TMP_MODULEFILES}/${LOCAL_STACK_NAME}"
+          echo "family(\"${FAMILY}\")" > "${TMP_MODULEFILES}/${LOCAL_STACK_NAME}/${LOCAL_STACK_VERSION}.lua"
+
+          # Make sure we are using the EESSI module file from the repository and the temporary one for the dummy local stack
+          export MODULEPATH=init/modules:${TMP_MODULEFILES}
+
+          # Set the relevant environment variable, load the EESSI module and the local stack module, and grep for
+          # Lmod is automatically replacing "..." with "...".
+          export EESSI_MODULE_FAMILY_NAME=${FAMILY}
+          module load "EESSI/${{matrix.EESSI_VERSION}}"
+          GREP_PATTERN="Lmod is automatically replacing \"EESSI/${{matrix.EESSI_VERSION}}\" with \"${LOCAL_STACK_NAME}/${LOCAL_STACK_VERSION}\"."
+          module load "${LOCAL_STACK_NAME}/${LOCAL_STACK_VERSION}" |& grep "${GREP_PATTERN}"
