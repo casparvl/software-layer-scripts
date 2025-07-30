@@ -109,12 +109,15 @@ for EASYSTACK_FILE in ${TOPDIR}/easystacks/eessi-*CUDA*.yml; do
     fi
     module load EasyBuild/${eb_version}
 
-    # Make sure EESSI-extend does a site install here
-    # We need to reload it with the current environment variables set
+    # Even though EESSI-extend should target a site install here, we tell EESSI-extend
+    # that it is a project installation so that the packages do not get installed under
+    # an accelerator subdirectory if there is a GPU available (which is enforced for site
+    # installations).
+    module unload EESSI-extend
     unset EESSI_CVMFS_INSTALL
-    unset EESSI_PROJECT_INSTALL
+    unset EESSI_SITE_INSTALL
+    export EESSI_PROJECT_INSTALL="$EESSI_SITE_SOFTWARE_PATH"
     unset EESSI_USER_INSTALL
-    export EESSI_SITE_INSTALL=1
     module unload EESSI-extend
     ml_av_eessi_extend_out=${tmpdir}/ml_av_eessi_extend.out
     # need to use --ignore_cache to avoid the case that the module was removed (to be
