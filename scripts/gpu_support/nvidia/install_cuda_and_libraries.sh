@@ -109,15 +109,12 @@ for EASYSTACK_FILE in ${TOPDIR}/easystacks/eessi-*CUDA*.yml; do
     fi
     module load EasyBuild/${eb_version}
 
-    # Even though EESSI-extend should target a site install here, we tell EESSI-extend
-    # that it is a project installation so that the packages do not get installed under
-    # an accelerator subdirectory if there is a GPU available (which is enforced for site
-    # installations).
-    module unload EESSI-extend
+    # Make sure EESSI-extend does a site install here
+    # We need to reload it with the current environment variables set
     unset EESSI_CVMFS_INSTALL
-    unset EESSI_SITE_INSTALL
-    export EESSI_PROJECT_INSTALL="$EESSI_SITE_SOFTWARE_PATH"
+    unset EESSI_PROJECT_INSTALL
     unset EESSI_USER_INSTALL
+    export EESSI_SITE_INSTALL=1
     module unload EESSI-extend
     ml_av_eessi_extend_out=${tmpdir}/ml_av_eessi_extend.out
     # need to use --ignore_cache to avoid the case that the module was removed (to be
@@ -133,10 +130,16 @@ for EASYSTACK_FILE in ${TOPDIR}/easystacks/eessi-*CUDA*.yml; do
     module --ignore_cache load EESSI-extend/${EESSI_EXTEND_VERSION}
     unset EESSI_EXTEND_VERSION
 
+    # If there is a GPU on the node, the installation path will by default have an
+    # accelerator subdirectory. For CUDA and cu*, these are binary installations and
+    # don't care about the target compute capability. Our hooks are aware of this and
+    # therefore expect CUDA to be available under EESSI_SITE_SOFTWARE_PATH
+    export EASYBUILD_INSTALLPATH=$EESSI_SITE_SOFTWARE_PATH
+
     # Install modules in hidden .modules dir to keep track of what was installed before
     # (this action is temporary, and we do not call Lmod again within the current shell context, but in EasyBuild
     # subshells, so loaded modules are not automatically unloaded)
-    MODULEPATH=${EESSI_SITE_SOFTWARE_PATH}/.modules/all
+    MODULEPATH=${EASYBUILD_INSTALLPATH}/.modules/all
     echo "set MODULEPATH=${MODULEPATH}"
 
     # We don't want hooks used in this install, we need vanilla installations
