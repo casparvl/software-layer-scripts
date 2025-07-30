@@ -105,7 +105,7 @@ local eessi_project_install = os.getenv("EESSI_PROJECT_INSTALL") ~= nil
 local eessi_user_install = os.getenv("EESSI_USER_INSTALL") ~= nil
 
 -- Use an installation prefix that we _should_ have write access to
-if (eessi_cvmfs_install) then
+if eessi_cvmfs_install then
   -- Make sure no other EESSI install environment variables are set
   if (eessi_site_install or eessi_project_install or eessi_user_install) then
     LmodError("You cannot use EESSI_CVMFS_INSTALL in combination with any other EESSI_*_INSTALL environment variables")
