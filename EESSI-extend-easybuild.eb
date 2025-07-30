@@ -99,7 +99,7 @@ if (eessi_accelerator_target ~= nil) then
 end
 
 -- Some environment variables affect behaviour, let's gather them once
-local eessi_cvmfs_install = os.getenv("EESSI_PROJECT_INSTALL") ~= nil
+local eessi_cvmfs_install = os.getenv("EESSI_CVMFS_INSTALL") ~= nil
 local eessi_site_install = os.getenv("EESSI_SITE_INSTALL") ~= nil
 local eessi_project_install = os.getenv("EESSI_PROJECT_INSTALL") ~= nil
 local eessi_user_install = os.getenv("EESSI_USER_INSTALL") ~= nil
