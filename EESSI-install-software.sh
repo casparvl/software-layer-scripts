@@ -178,6 +178,20 @@ else
     fatal_error "Failed to initialize Lmod?! (see output in ${ml_version_out}"
 fi
 
+# install any additional required scripts
+# order is important: these are needed to install a full CUDA SDK in host_injections
+# for now, this just reinstalls all scripts. Note the most elegant, but works
+
+# the install_scripts.sh script relies on knowing the location of the PR diff
+# assume there's only one diff file that corresponds to the PR patch file
+pr_diff=$(ls [0-9]*.diff | head -1)
+export PR_DIFF="$PWD/$pr_diff"
+
+# Only run install_scripts.sh if not in dev.eessi.io for security
+if [[ -z ${EESSI_DEV_PROJECT} ]]; then
+    ${TOPDIR}/install_scripts.sh --prefix ${EESSI_CVMFS_REPO}/versions/${EESSI_VERSION} --eessi-version ${EESSI_VERSION}
+fi
+
 # Make sure we start with no modules and clean $MODULEPATH
 echo ">> Setting up \$MODULEPATH..."
 module --force purge
@@ -233,20 +247,6 @@ if [ ! -f ${_lmod_sitepackage_file} ]; then
     python3 ${TOPDIR}/create_lmodsitepackage.py ${_eessi_software_path}
 fi
 
-# install any additional required scripts
-# order is important: these are needed to install a full CUDA SDK in host_injections
-# for now, this just reinstalls all scripts. Note the most elegant, but works
-
-# the install_scripts.sh script relies on knowing the location of the PR diff
-# assume there's only one diff file that corresponds to the PR patch file
-pr_diff=$(ls [0-9]*.diff | head -1)
-export PR_DIFF="$PWD/$pr_diff"
-
-# Only run install_scripts.sh if not in dev.eessi.io for security
-if [[ -z ${EESSI_DEV_PROJECT} ]]; then
-    ${TOPDIR}/install_scripts.sh --prefix ${EESSI_PREFIX}
-fi
-
 echo ">> Configuring EasyBuild..."
 
 # Make sure EESSI-extend is not loaded, and configure location variables for a
@@ -277,6 +277,16 @@ if [[ ! -z ${EESSI_DEV_PROJECT} ]]; then
     unset EESSI_CVMFS_INSTALL
     export EESSI_PROJECT_INSTALL=${EESSI_CVMFS_REPO_OVERRIDE}
     echo ">> \$EESSI_PROJECT_INSTALL set to ${EESSI_PROJECT_INSTALL}"
+fi
+
+# If we have EESSI_ACCELERATOR_TARGET_OVERRIDE set (and non-empty), then this implies building for a GPU target
+# (this must be set _before_ we load EESSI-extend).
+# We also make sure that EESSI_ACCELERATOR_TARGET is also set as EESSI_ACCELERATOR_TARGET_OVERRIDE must
+# be set before the EESSI module is loaded in order to set accelerator information.
+if [[ -n "$EESSI_ACCELERATOR_TARGET_OVERRIDE" && -z "$EESSI_ACCELERATOR_TARGET" ]]; then
+  fatal_error "EESSI module should've set EESSI_ACCELERATOR_TARGET ($EESSI_ACCELERATOR_TARGET) when EESSI_ACCELERATOR_TARGET_OVERRIDE ($EESSI_ACCELERATOR_TARGET_OVERRIDE) exported."
+elif [[ -n "$EESSI_ACCELERATOR_TARGET_OVERRIDE" ]]; then
+  export EESSI_ACCELERATOR_INSTALL=1
 fi
 
 echo "DEBUG: before loading EESSI-extend // EASYBUILD_INSTALLPATH='${EASYBUILD_INSTALLPATH}'"
@@ -366,11 +376,7 @@ else
             echo_green "Feeding easystack file ${easystack_file} to EasyBuild..."
 
             if [[ ${easystack_file} == *"/rebuilds/"* ]]; then
-                # the removal script should have removed the original directory and created a new and empty one
-                # to work around permission issues:
-                # https://github.com/EESSI/software-layer/issues/556
-                echo_yellow "This is a rebuild, so using --try-amend=keeppreviousinstall=True to reuse the already created directory"
-                ${EB} --easystack ${easystack_file} --robot --try-amend=keeppreviousinstall=True
+                ${EB} --easystack ${easystack_file} --rebuild
             else
                 ${EB} --easystack ${easystack_file} --robot
             fi
