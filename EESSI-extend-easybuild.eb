@@ -215,7 +215,6 @@ eessi_version = os.getenv("EESSI_VERSION") or "2023.06"
 if convertToCanonical(easybuild_version) > convertToCanonical("4") then
   setenv ("EASYBUILD_STRICT_RPATH_SANITY_CHECK", "1")
   setenv ("EASYBUILD_CUDA_SANITY_CHECK_ERROR_ON_FAILED_CHECKS", "1")
-  setenv ("EASYBUILD_ENV_FOR_SHEBANG", "1")
   setenv ("EASYBUILD_FAIL_ON_MOD_FILES_GCCCORE", "1")
   setenv ("EASYBUILD_LOCAL_VAR_NAMING_CHECK", "error")
   -- Set environment variables that are EESSI version specific

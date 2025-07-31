@@ -88,7 +88,6 @@ jobs:
           # Check some things that are EasyBuild 5+ (available in all EESSI versions so should exist)
           check_env_var "EASYBUILD_STRICT_RPATH_SANITY_CHECK" "1"
           check_env_var "EASYBUILD_CUDA_SANITY_CHECK_ERROR_ON_FAILED_CHECKS" "1"
-          check_env_var "EASYBUILD_ENV_FOR_SHEBANG" "1"
           check_env_var "EASYBUILD_FAIL_ON_MOD_FILES_GCCCORE" "1"
           check_env_var "EASYBUILD_LOCAL_VAR_NAMING_CHECK" "error"
           # Check some EESSI version specific settings
