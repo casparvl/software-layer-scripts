@@ -315,6 +315,7 @@ set +e
 verify_nvidia-smi
 ec=$?
 if [ ${ec} -eq 0 ]; then
+    echo "Installing NVIDIA drivers for use in prefix shell...""
     export LD_LIBRARY_PATH="/.singularity.d/libs:${LD_LIBRARY_PATH}"
     ${EESSI_PREFIX}/scripts/gpu_support/nvidia/link_nvidia_host_libraries.sh
 elif [ ${ec} -eq 1 ]; then

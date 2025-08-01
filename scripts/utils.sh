@@ -153,7 +153,7 @@ function verify_nvidia-smi {
         nvidia-smi --version
         ec=$?
         if [ ${ec} -eq 0 ]; then
-            echo "Command 'nvidia-smi' found. Installing NVIDIA drivers for use in prefix shell..."
+            echo "Command 'nvidia-smi' found."
 	    return 0
         else
             echo "Warning: command 'nvidia-smi' found, but 'nvidia-smi --version' did not run succesfully."
