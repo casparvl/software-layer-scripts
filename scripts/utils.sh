@@ -162,7 +162,7 @@ function verify_nvidia-smi {
 	    return 1
 	fi
     else
-        echo echo "No 'nvidia-smi' found, no available GPU but allowing overriding this check" 
+        echo "No 'nvidia-smi' found, no available GPU but allowing overriding this check" 
 	return 2
     fi
 }
