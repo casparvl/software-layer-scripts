@@ -747,7 +747,11 @@ declare -a EESSI_FUSE_MOUNTS=()
 # mount cvmfs-config repo (to get access to EESSI repositories such as software.eessi.io) unless env var
 # EESSI_DO_NOT_MOUNT_CVMFS_CONFIG_CERN_CH is defined
 if [ -z ${EESSI_DO_NOT_MOUNT_CVMFS_CONFIG_CERN_CH+x} ]; then
-    EESSI_FUSE_MOUNTS+=("--fusemount" "container:cvmfs2 cvmfs-config.cern.ch /cvmfs/cvmfs-config.cern.ch")
+    if [[ -x $(command -v cvmfs_config) ]] && cvmfs_config probe cvmfs-config.cern.ch >& /dev/null; then
+        BIND_PATHS="${BIND_PATHS},/cvmfs/cvmfs-config.cern.ch"
+    else
+        EESSI_FUSE_MOUNTS+=("--fusemount" "container:cvmfs2 cvmfs-config.cern.ch /cvmfs/cvmfs-config.cern.ch")
+    fi
 fi
 
 
@@ -758,7 +762,7 @@ do
     [[ ${VERBOSE} -eq 1 ]] && echo "add fusemount options for CVMFS repo '${cvmfs_repo}'"
     # split into name, access mode, and mount mode
     readarray -td, cvmfs_repo_args <<<"$cvmfs_repo"
-    cvmfs_repo_name=${cvmfs_repo_args[0]}
+    cvmfs_repo_name=$(sed -e 's/\\n//g' <<< "${cvmfs_repo_args[0]}")
     cvmfs_repo_access="${ACCESS}" # initialize to the default access mode
     for arg in ${cvmfs_repo_args[@]:1}; do
         if [[ $arg == "access="* ]]; then
@@ -773,6 +777,20 @@ do
             fi
         fi
     done
+
+    # obtain cvmfs_repo_name from EESSI_REPOS_CFG_FILE if cvmfs_repo is in cfg_cvmfs_repos
+    if [[ ${cfg_cvmfs_repos[${cvmfs_repo_name}]} ]]; then
+        [[ ${VERBOSE} -eq 1 ]] && echo "repo '${cvmfs_repo_name}' is not an EESSI CVMFS repository..."
+        # cvmfs_repo_name is actually a repository ID, use that to obtain
+        #   the actual name from the EESSI_REPOS_CFG_FILE
+        cfg_repo_id=${cvmfs_repo_name}
+        echo "bob $cfg_repo_id"
+        cvmfs_repo_name=$(cfg_get_value ${cfg_repo_id} "repo_name")
+        echo $cvmfs_repo_name
+    fi
+    # remove project subdir in container
+    cvmfs_repo_name=${cvmfs_repo_name%"/${EESSI_DEV_PROJECT}"}
+
     # if a mount mode was not specified, we use a bind mount if the repository is available on the host,
     # and otherwise we use a fuse mount
     if [[ -z ${cvmfs_repo_mount} ]]; then
@@ -789,17 +807,6 @@ do
             exit ${REPOSITORY_ERROR_EXITCODE}
         fi
     fi
-
-    # obtain cvmfs_repo_name from EESSI_REPOS_CFG_FILE if cvmfs_repo is in cfg_cvmfs_repos
-    if [[ ${cfg_cvmfs_repos[${cvmfs_repo_name}]} ]]; then
-        [[ ${VERBOSE} -eq 1 ]] && echo "repo '${cvmfs_repo_name}' is not an EESSI CVMFS repository..."
-        # cvmfs_repo_name is actually a repository ID, use that to obtain
-        #   the actual name from the EESSI_REPOS_CFG_FILE
-        cfg_repo_id=${cvmfs_repo_name}
-        cvmfs_repo_name=$(cfg_get_value ${cfg_repo_id} "repo_name")
-    fi
-    # remove project subdir in container
-    cvmfs_repo_name=${cvmfs_repo_name%"/${EESSI_DEV_PROJECT}"}
 
     # always create a directory for the repository (e.g., to store settings, ...)
     mkdir -p ${EESSI_TMPDIR}/${cvmfs_repo_name}
