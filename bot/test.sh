@@ -225,7 +225,7 @@ fi
 TEST_STEP_ARGS+=("--extra-bind-paths" "/sys/fs/cgroup:/hostsys/fs/cgroup:ro")
 
 # add options required to handle NVIDIA support
-if verify_nvidia-smi; then
+if nvidia_gpu_available; then
     TEST_STEP_ARGS+=("--nvidia" "run")
 fi
 
