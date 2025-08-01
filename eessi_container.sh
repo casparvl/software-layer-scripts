@@ -782,6 +782,13 @@ do
         fi
     fi
     [[ ${VERBOSE} -eq 1 ]] && echo "Using a ${cvmfs_repo_mount} mount for /cvmfs/${cvmfs_repo_name}"
+    # if a bind mount was requested, check if the repository is really available on the host
+    if [[ ${cvmfs_repo_mount} == "bind" ]]; then
+        if [[ ! -x $(command -v cvmfs_config) ]] || ! cvmfs_config probe ${cvmfs_repo_name} >& /dev/null; then
+            echo -e "ERROR: bind mount requested for CVMFS repository\n  '${cvmfs_repo_name}', but it cannot be probed on the host"
+            exit ${REPOSITORY_ERROR_EXITCODE}
+        fi
+    fi
 
     # obtain cvmfs_repo_name from EESSI_REPOS_CFG_FILE if cvmfs_repo is in cfg_cvmfs_repos
     if [[ ${cfg_cvmfs_repos[${cvmfs_repo_name}]} ]]; then
