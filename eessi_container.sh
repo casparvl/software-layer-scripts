@@ -756,14 +756,33 @@ for cvmfs_repo in "${REPOSITORIES[@]}"
 do
     unset cfg_repo_id
     [[ ${VERBOSE} -eq 1 ]] && echo "add fusemount options for CVMFS repo '${cvmfs_repo}'"
-    # split into name and access mode if ',access=' in $cvmfs_repo
-    if [[ ${cvmfs_repo} == *",access="* ]] ; then
-        cvmfs_repo_name=${cvmfs_repo/,access=*/} # remove access mode specification
-        cvmfs_repo_access=${cvmfs_repo/*,access=/} # remove repo name part
-    else
-        cvmfs_repo_name="${cvmfs_repo}"
-        cvmfs_repo_access="${ACCESS}" # use globally defined access mode
+    # split into name, access mode, and mount mode
+    readarray -td, cvmfs_repo_args <<<"$cvmfs_repo"
+    cvmfs_repo_name=${cvmfs_repo_args[0]}
+    cvmfs_repo_access="${ACCESS}" # initialize to the default access mode
+    for arg in ${cvmfs_repo_args[@]:1}; do
+        if [[ $arg == "access="* ]]; then
+            cvmfs_repo_access=${arg/access=}
+        fi
+        if [[ $arg == "mount="* ]]; then
+            cvmfs_repo_mount=${arg/mount=}
+            # check if the specified mount mode is a valid one
+            if [[ ${cvmfs_repo_mount} != "bind" ]] && [[ ${cvmfs_repo_mount} != "fuse" ]]; then
+                echo -e "ERROR: mount mode '${cvmfs_repo_mount}' for CVMFS repository\n  '${cvmfs_repo_name}' is not known"
+                exit ${REPOSITORY_ERROR_EXITCODE}
+            fi
+        fi
+    done
+    # if a mount mode was not specified, we use a bind mount if the repository is available on the host,
+    # and otherwise we use a fuse mount
+    if [[ -z ${cvmfs_repo_mount} ]]; then
+        cvmfs_repo_mount="fuse"
+        if [[ -x $(command -v cvmfs_config) ]] && cvmfs_config probe ${cvmfs_repo_name} >& /dev/null; then
+            cvmfs_repo_mount="bind"
+        fi
     fi
+    [[ ${VERBOSE} -eq 1 ]] && echo "Using a ${cvmfs_repo_mount} mount for /cvmfs/${cvmfs_repo_name}"
+
     # obtain cvmfs_repo_name from EESSI_REPOS_CFG_FILE if cvmfs_repo is in cfg_cvmfs_repos
     if [[ ${cfg_cvmfs_repos[${cvmfs_repo_name}]} ]]; then
         [[ ${VERBOSE} -eq 1 ]] && echo "repo '${cvmfs_repo_name}' is not an EESSI CVMFS repository..."
@@ -795,9 +814,12 @@ do
             echo "  session. Will use it as left-most directory in 'lowerdir' argument for fuse-overlayfs."
 
             # make the target CernVM-FS repository available under /cvmfs_ro
-            export EESSI_READONLY="container:cvmfs2 ${cvmfs_repo_name} /cvmfs_ro/${cvmfs_repo_name}"
-
-            EESSI_FUSE_MOUNTS+=("--fusemount" "${EESSI_READONLY}")
+            if [[ ${cvmfs_repo_mount} == "fuse" ]]; then
+                export EESSI_READONLY="container:cvmfs2 ${cvmfs_repo_name} /cvmfs_ro/${cvmfs_repo_name}"
+                EESSI_FUSE_MOUNTS+=("--fusemount" "${EESSI_READONLY}")
+            elif [[ ${cvmfs_repo_mount} == "bind" ]]; then
+                BIND_PATHS="/cvmfs/${cvmfs_repo_name}:/cvmfs_ro/${cvmfs_repo_name},${BIND_PATHS}"
+            fi
 
             # now, put the overlay-upper read-only on top of the repo and make it available under the usual prefix /cvmfs
             if [[ "${OVERLAY_TOOL}" == "fuse-overlayfs" ]]; then
@@ -827,10 +849,14 @@ do
             # basic "ro" access that doesn't require any fuseoverlay-fs
             echo "Mounting '${cvmfs_repo_name}' 'read-only' without fuse-overlayfs."
 
-            export EESSI_READONLY="container:cvmfs2 ${cvmfs_repo_name} /cvmfs/${cvmfs_repo_name}"
+            if [[ ${cvmfs_repo_mount} == "fuse" ]]; then
+                export EESSI_READONLY="container:cvmfs2 ${cvmfs_repo_name} /cvmfs/${cvmfs_repo_name}"
+                EESSI_FUSE_MOUNTS+=("--fusemount" "${EESSI_READONLY}")
+                export EESSI_FUSE_MOUNTS
+            elif [[ ${cvmfs_repo_mount} == "bind" ]]; then
+                BIND_PATHS="/cvmfs/${cvmfs_repo_name},${BIND_PATHS}"
+            fi
 
-            EESSI_FUSE_MOUNTS+=("--fusemount" "${EESSI_READONLY}")
-            export EESSI_FUSE_MOUNTS
         fi
     elif [[ ${cvmfs_repo_access} == "rw" ]] ; then
         # use repo-specific overlay directories
@@ -840,9 +866,12 @@ do
         [[ ${VERBOSE} -eq 1 ]] && echo -e "TMP directory contents:\n$(ls -l ${EESSI_TMPDIR})"
 
         # set environment variables for fuse mounts in Singularity container
-        export EESSI_READONLY="container:cvmfs2 ${cvmfs_repo_name} /cvmfs_ro/${cvmfs_repo_name}"
-
-        EESSI_FUSE_MOUNTS+=("--fusemount" "${EESSI_READONLY}")
+        if [[ ${cvmfs_repo_mount} == "fuse" ]]; then
+            export EESSI_READONLY="container:cvmfs2 ${cvmfs_repo_name} /cvmfs_ro/${cvmfs_repo_name}"
+            EESSI_FUSE_MOUNTS+=("--fusemount" "${EESSI_READONLY}")
+        elif [[ ${cvmfs_repo_mount} == "bind" ]]; then
+            BIND_PATHS="/cvmfs/${cvmfs_repo_name}:/cvmfs_ro/${cvmfs_repo_name},${BIND_PATHS}"
+        fi
 
         if [[ "${OVERLAY_TOOL}" == "fuse-overlayfs" ]]; then
             EESSI_WRITABLE_OVERLAY="container:fuse-overlayfs"
