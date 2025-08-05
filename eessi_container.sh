@@ -316,12 +316,9 @@ fi
 # iterate over entries in REPOSITORIES and check if they are known
 for cvmfs_repo in "${REPOSITORIES[@]}"
 do
-    # split into name and access mode if ',access=' in $cvmfs_repo
-    if [[ ${cvmfs_repo} == *",access="* ]] ; then
-        cvmfs_repo_name=${cvmfs_repo/,access=*/} # remove access mode specification
-    else
-        cvmfs_repo_name="${cvmfs_repo}"
-    fi
+    readarray -td, cvmfs_repo_args < <(printf '%s' "$cvmfs_repo")
+    cvmfs_repo_name=${cvmfs_repo_args[0]}
+
     if [[ ! -n "${eessi_cvmfs_repos[${cvmfs_repo_name}]}" && ! -n ${cfg_cvmfs_repos[${cvmfs_repo_name}]} ]]; then
         fatal_error "The repository '${cvmfs_repo_name}' is not an EESSI CVMFS repository or it is not known how to mount it (could be due to a typo or missing configuration). Run '$0 -l' to obtain a list of available repositories." "${REPOSITORY_ERROR_EXITCODE}"
     fi
@@ -331,7 +328,8 @@ done
 declare -A listed_repos=()
 for cvmfs_repo in "${REPOSITORIES[@]}"
 do
-    cvmfs_repo_name=${cvmfs_repo/,access=*/} # remove access mode
+    readarray -td, cvmfs_repo_args < <(printf '%s' "$cvmfs_repo")
+    cvmfs_repo_name=${cvmfs_repo_args[0]}
     [[ ${VERBOSE} -eq 1 ]] && echo "checking for duplicates: '${cvmfs_repo}' and '${cvmfs_repo_name}'"
     # if cvmfs_repo_name is not in eessi_cvmfs_repos, assume it's in cfg_cvmfs_repos
     #   and obtain actual repo_name from config
@@ -617,14 +615,8 @@ mkdir -p ${EESSI_TMPDIR}/repos_cfg
 for cvmfs_repo in "${REPOSITORIES[@]}"
 do
     [[ ${VERBOSE} -eq 1 ]] && echo "process CVMFS repo spec '${cvmfs_repo}'"
-    # split into name and access mode if ',access=' in $cvmfs_repo
-    if [[ ${cvmfs_repo} == *",access="* ]] ; then
-        cvmfs_repo_name=${cvmfs_repo/,access=*/} # remove access mode specification
-        cvmfs_repo_access=${cvmfs_repo/*,access=/} # remove repo name part
-    else
-        cvmfs_repo_name="${cvmfs_repo}"
-        cvmfs_repo_access="${ACCESS}" # use globally defined access mode
-    fi
+    readarray -td, cvmfs_repo_args < <(printf '%s' "$cvmfs_repo")
+    cvmfs_repo_name=${cvmfs_repo_args[0]}
     # if cvmfs_repo_name is in cfg_cvmfs_repos, it is a "repository ID" and was
     #   derived from information in EESSI_REPOS_CFG_FILE, namely the section
     #   names in that .ini-type file
