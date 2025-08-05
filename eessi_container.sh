@@ -761,20 +761,16 @@ do
     unset cfg_repo_id
     [[ ${VERBOSE} -eq 1 ]] && echo "add fusemount options for CVMFS repo '${cvmfs_repo}'"
     # split into name, access mode, and mount mode
-    readarray -td, cvmfs_repo_args <<<"$cvmfs_repo"
-    cvmfs_repo_name=${cvmfs_repo_args[0]%$'\n'} # remove possible trailing newline
+    readarray -td, cvmfs_repo_args < <(printf '%s' "$cvmfs_repo")
+    cvmfs_repo_name=${cvmfs_repo_args[0]}
     cvmfs_repo_access="${ACCESS}" # initialize to the default access mode
     cvmfs_repo_mount="fuse" # use fuse mounts by default
     for arg in ${cvmfs_repo_args[@]:1}; do
         if [[ $arg == "access="* ]]; then
             cvmfs_repo_access=${arg/access=}
-            # remove possible trailing newline
-            cvmfs_repo_access=${cvmfs_repo_access%$'\n'}
         fi
         if [[ $arg == "mount="* ]]; then
             cvmfs_repo_mount=${arg/mount=}
-            # remove possible trailing newline
-            cvmfs_repo_mount=${cvmfs_repo_mount%$'\n'}
         fi
     done
 
@@ -791,9 +787,7 @@ do
         # cvmfs_repo_name is actually a repository ID, use that to obtain
         #   the actual name from the EESSI_REPOS_CFG_FILE
         cfg_repo_id=${cvmfs_repo_name}
-        echo "bob $cfg_repo_id"
         cvmfs_repo_name=$(cfg_get_value ${cfg_repo_id} "repo_name")
-        echo $cvmfs_repo_name
     fi
     # remove project subdir in container
     cvmfs_repo_name=${cvmfs_repo_name%"/${EESSI_DEV_PROJECT}"}
