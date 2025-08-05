@@ -247,6 +247,29 @@ if [ ! -f ${_lmod_sitepackage_file} ]; then
     python3 ${TOPDIR}/create_lmodsitepackage.py ${_eessi_software_path}
 fi
 
+# Install full CUDA SDK and cu* libraries in host_injections
+# (This is done *before* configuring EasyBuild as it may rely on an older EB version)
+# Hardcode this for now, see if it works
+# TODO: We should make a nice yaml and loop over all CUDA versions in that yaml to figure out what to install
+# Allow skipping CUDA SDK install in e.g. CI environments
+echo "Going to install full CUDA SDK and cu* libraries under host_injections if necessary"
+temp_install_storage=${TMPDIR}/temp_install_storage
+mkdir -p ${temp_install_storage}
+if [ -z "${skip_cuda_install}" ] || [ ! "${skip_cuda_install}" ]; then
+    ${EESSI_PREFIX}/scripts/gpu_support/nvidia/install_cuda_and_libraries.sh \
+        -t ${temp_install_storage} \
+        --accept-cuda-eula \
+        --accept-cudnn-eula
+else
+    echo "Skipping installation of CUDA SDK and cu* libraries in host_injections, since the --skip-cuda-install flag was passed"
+fi
+
+# Install NVIDIA drivers in host_injections (if they exist)
+if nvidia_gpu_available; then
+    echo "Installing NVIDIA drivers for use in prefix shell..."
+    ${EESSI_PREFIX}/scripts/gpu_support/nvidia/link_nvidia_host_libraries.sh
+fi
+
 echo ">> Configuring EasyBuild..."
 
 # Make sure EESSI-extend is not loaded, and configure location variables for a
@@ -292,28 +315,6 @@ fi
 echo "DEBUG: before loading EESSI-extend // EASYBUILD_INSTALLPATH='${EASYBUILD_INSTALLPATH}'"
 source $TOPDIR/load_eessi_extend_module.sh ${EESSI_VERSION}
 echo "DEBUG: after loading EESSI-extend //  EASYBUILD_INSTALLPATH='${EASYBUILD_INSTALLPATH}'"
-
-# Install full CUDA SDK and cu* libraries in host_injections
-# Hardcode this for now, see if it works
-# TODO: We should make a nice yaml and loop over all CUDA versions in that yaml to figure out what to install
-# Allow skipping CUDA SDK install in e.g. CI environments
-echo "Going to install full CUDA SDK and cu* libraries under host_injections if necessary"
-temp_install_storage=${TMPDIR}/temp_install_storage
-mkdir -p ${temp_install_storage}
-if [ -z "${skip_cuda_install}" ] || [ ! "${skip_cuda_install}" ]; then
-    ${EESSI_PREFIX}/scripts/gpu_support/nvidia/install_cuda_and_libraries.sh \
-        -t ${temp_install_storage} \
-        --accept-cuda-eula \
-        --accept-cudnn-eula
-else
-    echo "Skipping installation of CUDA SDK and cu* libraries in host_injections, since the --skip-cuda-install flag was passed"
-fi
-
-# Install NVIDIA drivers in host_injections (if they exist)
-if nvidia_gpu_available; then
-    echo "Installing NVIDIA drivers for use in prefix shell..."
-    ${EESSI_PREFIX}/scripts/gpu_support/nvidia/link_nvidia_host_libraries.sh
-fi
 
 if [ ! -z "${shared_fs_path}" ]; then
     shared_eb_sourcepath=${shared_fs_path}/easybuild/sources
