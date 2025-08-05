@@ -762,21 +762,28 @@ do
     [[ ${VERBOSE} -eq 1 ]] && echo "add fusemount options for CVMFS repo '${cvmfs_repo}'"
     # split into name, access mode, and mount mode
     readarray -td, cvmfs_repo_args <<<"$cvmfs_repo"
-    cvmfs_repo_name=$(sed -e 's/\\n//g' <<< "${cvmfs_repo_args[0]}")
+    cvmfs_repo_name=${cvmfs_repo_args[0]%$'\n'} # remove possible trailing newline
     cvmfs_repo_access="${ACCESS}" # initialize to the default access mode
+    cvmfs_repo_mount="fuse" # use fuse mounts by default
     for arg in ${cvmfs_repo_args[@]:1}; do
         if [[ $arg == "access="* ]]; then
             cvmfs_repo_access=${arg/access=}
+            # remove possible trailing newline
+            cvmfs_repo_access=${cvmfs_repo_access%$'\n'}
         fi
         if [[ $arg == "mount="* ]]; then
             cvmfs_repo_mount=${arg/mount=}
-            # check if the specified mount mode is a valid one
-            if [[ ${cvmfs_repo_mount} != "bind" ]] && [[ ${cvmfs_repo_mount} != "fuse" ]]; then
-                echo -e "ERROR: mount mode '${cvmfs_repo_mount}' for CVMFS repository\n  '${cvmfs_repo_name}' is not known"
-                exit ${REPOSITORY_ERROR_EXITCODE}
-            fi
+            # remove possible trailing newline
+            cvmfs_repo_mount=${cvmfs_repo_mount%$'\n'}
         fi
     done
+
+    # check if the specified mount mode is a valid one
+    if [[ ${cvmfs_repo_mount} != "bind" ]] && [[ ${cvmfs_repo_mount} != "fuse" ]]; then
+        echo -e "ERROR: mount mode '${cvmfs_repo_mount}' for CVMFS repository\n  '${cvmfs_repo_name}' is not known"
+        exit ${REPOSITORY_ERROR_EXITCODE}
+    fi
+    [[ ${VERBOSE} -eq 1 ]] && echo "Using a ${cvmfs_repo_mount} mount for /cvmfs/${cvmfs_repo_name}"
 
     # obtain cvmfs_repo_name from EESSI_REPOS_CFG_FILE if cvmfs_repo is in cfg_cvmfs_repos
     if [[ ${cfg_cvmfs_repos[${cvmfs_repo_name}]} ]]; then
@@ -791,15 +798,6 @@ do
     # remove project subdir in container
     cvmfs_repo_name=${cvmfs_repo_name%"/${EESSI_DEV_PROJECT}"}
 
-    # if a mount mode was not specified, we use a bind mount if the repository is available on the host,
-    # and otherwise we use a fuse mount
-    if [[ -z ${cvmfs_repo_mount} ]]; then
-        cvmfs_repo_mount="fuse"
-        if [[ -x $(command -v cvmfs_config) ]] && cvmfs_config probe ${cvmfs_repo_name} >& /dev/null; then
-            cvmfs_repo_mount="bind"
-        fi
-    fi
-    [[ ${VERBOSE} -eq 1 ]] && echo "Using a ${cvmfs_repo_mount} mount for /cvmfs/${cvmfs_repo_name}"
     # if a bind mount was requested, check if the repository is really available on the host
     if [[ ${cvmfs_repo_mount} == "bind" ]]; then
         if [[ ! -x $(command -v cvmfs_config) ]] || ! cvmfs_config probe ${cvmfs_repo_name} >& /dev/null; then
