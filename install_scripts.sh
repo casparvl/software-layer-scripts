@@ -46,6 +46,16 @@ sed_update_if_changed() {
 
     local sed_command="$1"
     local file="$2"
+
+    echo "install-scripts.sh:sed_update_if_changed: TRYING TO LS"
+    ls -al /cvmfs/software.eessi.io/versions/2023.06/init
+    echo "install-scripts.sh:sed_update_if_changed: TRYING TO TOUCH"
+    touch /cvmfs/software.eessi.io/versions/2023.06/init/foo_install_scripts_sed_update
+    mktemp foo.XXXXXXX
+    echo "install-scripts.sh:sed_update_if_changed: CHECK FOR NEW FILE"
+    ls -al /cvmfs/software.eessi.io/versions/2023.06/init
+
+
     local tmp_file="$(mktemp "${file}.XXXXXX")"
 
     sed "$sed_command" "$file" > "$tmp_file" || {
