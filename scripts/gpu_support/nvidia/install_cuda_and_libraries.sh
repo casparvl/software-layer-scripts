@@ -265,7 +265,7 @@ for EASYSTACK_FILE in ${TOPDIR}/easystacks/eessi-*CUDA*.yml; do
       cp -a ${eb_last_log} .
       fatal_error "some installation failed, please check EasyBuild logs ${PWD}/$(basename ${eb_last_log})..."
     else
-      echo_green "all installations at ${EESSI_SITE_SOFTWARE_PATH}/software/... succeeded!"
+      echo_green "all installations at ${EASYBUILD_INSTALLPATH}/... succeeded!"
     fi
 
     # clean up tmpdir content
