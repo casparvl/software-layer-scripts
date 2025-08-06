@@ -141,7 +141,7 @@ for EASYSTACK_FILE in ${TOPDIR}/easystacks/eessi-*CUDA*.yml; do
     # of the capture group and then have the EESSI_CPU_FAMILY appended
     # Thus EESSI_SITE_CPU_FAMILY_PATH is something like /cvmfs/software.eessi.io/host_injections/.../x86_64
     EESSI_SITE_CPU_FAMILY_PATH=$(echo "$EESSI_SITE_SOFTWARE_PATH" | sed 's|\(.*\)'"$EESSI_SOFTWARE_SUBDIR"'|\1'"$EESSI_CPU_FAMILY"'|')
-    export EASYBUILD_INSTALLPATH=$EESSI_SITE_SOFTWARE_PATH
+    export EASYBUILD_INSTALLPATH=$EESSI_SITE_CPU_FAMILY_PATH
 
     # Install modules in hidden .modules dir to keep track of what was installed before
     # (this action is temporary, and we do not call Lmod again within the current shell context, but in EasyBuild
