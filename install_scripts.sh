@@ -231,6 +231,13 @@ copy_files_by_list ${TOPDIR} ${INSTALL_PREFIX}/init/easybuild "${hook_files[@]}"
 # note: the commands below are always run, regardless of whether the scripts were changed,
 # but that should be fine (no changes are made if version placeholder is not present anymore)
 
+echo "install-scripts.sh: TRYING TO LS"
+ls -al /cvmfs/software.eessi.io
+echo "install-scripts.sh: TRYING TO TOUCH"
+touch /cvmfs/software.eessi.io/foo_install_scripts
+echo "install-scripts.sh: CHECK FOR NEW FILE"
+ls -al /cvmfs/software.eessi.io
+
 # make sure that scripts in init/ and scripts/ use correct EESSI version
 sed_update_if_changed "s/__EESSI_VERSION_DEFAULT__/${EESSI_VERSION}/g" ${INSTALL_PREFIX}/init/eessi_defaults
 
