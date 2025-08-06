@@ -188,6 +188,13 @@ pr_diff=$(ls [0-9]*.diff | head -1)
 export PR_DIFF="$PWD/$pr_diff"
 
 # Only run install_scripts.sh if not in dev.eessi.io for security
+echo "EESSI-software-layer.sh: TRYING TO LS"
+ls -al /cvmfs/software.eessi.io
+echo "EESSI-software-layer.sh: TRYING TO TOUCH"
+touch /cvmfs/software.eessi.io/bar
+echo "EESSI-software-layer.sh CHECK FOR NEW FILE"
+ls -al /cvmfs/software.eessi.io
+
 if [[ -z ${EESSI_DEV_PROJECT} ]]; then
     ${TOPDIR}/install_scripts.sh --prefix ${EESSI_CVMFS_REPO}/versions/${EESSI_VERSION} --eessi-version ${EESSI_VERSION}
 fi
