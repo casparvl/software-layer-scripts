@@ -1322,7 +1322,7 @@ def replace_non_distributable_files_with_symlinks(log, install_dir, pkg_name, al
                     # After this substitution, host_inj_path will be something like
                     # /cvmfs/software.eessi.io/host_injections/.../x86_64/.../CUDA/bin/nvcc
                     if software_subdir and cpu_family:
-                        host_inj_path.replace(software_subdir, cpu_family)
+                        host_inj_path = host_inj_path.replace(software_subdir, cpu_family)
                     # make sure source and target of symlink are not the same
                     if full_path == host_inj_path:
                         raise EasyBuildError("Source (%s) and target (%s) are the same location, are you sure you "
