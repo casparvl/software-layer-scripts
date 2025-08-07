@@ -69,11 +69,6 @@ if [ -n "${accel_subdir}" ]; then
 fi
 for subdir in ${sw_subdirs}; do
 
-    if [ -d ${eessi_version}/software/${os}/${subdir}/.lmod ]; then
-        # lmod SitePackage or lmodrc files
-        find ${eessi_version}/software/${os}/${subdir}/.lmod - type f \! -name '.wh.*' >> ${files_list}
-    fi
-
     if [ -d ${eessi_version}/software/${os}/${subdir}/modules ]; then
         # module files
         find ${eessi_version}/software/${os}/${subdir}/modules -type f \! -name '.wh.*' >> ${files_list}
