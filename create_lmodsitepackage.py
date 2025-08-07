@@ -137,10 +137,10 @@ local function eessi_cuda_and_libraries_enabled_load_hook(t)
         local packageEasyBuildDir = hostInjections .. "/software/" .. t.modFullName .. "/easybuild"
         local packageDirExists = isDir(packageEasyBuildDir)
         if previousPackageDirExists and not packageDirExists then
-            local targettedAdvice = "but while the module file exists, the actual software is not entirely shipped with EESSI "
+            local advice = "but while the module file exists, the actual software is not entirely shipped with EESSI "
             advice = advice .. "due to licencing. You will need to install a full copy of the " .. simpleName .. " package where EESSI "
             advice = advice .. "can find it.\\n"
-            advice = advice .. "Note that a full copy is installed at " .. previoushostInjections .. "/software/" .. t.modFullName ". "
+            advice = advice .. "Note that a full copy is installed at " .. previousHostInjections .. "/software/" .. t.modFullName .. ". "
             advice = advice .. "However, EESSI now expects it in a different location, namely at "
             advice = advice .. hostInjections .. "/software/" .. t.modFullName "."
             advice = advice .. "Please re-install the package at the new location."
