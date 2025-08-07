@@ -123,13 +123,29 @@ local function eessi_cuda_and_libraries_enabled_load_hook(t)
     local refer_to_docs = "For more information on how to do this, see https://www.eessi.io/docs/site_specific_config/gpu/.\\n"
     if packagesList[simpleName] then
         -- simpleName is a module in packagesList
-        -- get the full host_injections path
-        local hostInjections = string.gsub(os.getenv('EESSI_SOFTWARE_PATH') or "", 'versions', 'host_injections')
+        -- first, check the old host_injections path. If that exists, print a more targetted, explainatory warning
+        local previousHostInjections = string.gsub(os.getenv('EESSI_SOFTWARE_PATH') or "", 'versions', 'host_injections')
+        local previousPackageEasyBuildDir = hostInjections .. "/software/" .. t.modFullName .. "/easybuild"
+        local previousPackageDirExists = isDir(previousPackageEasyBuildDir)
+
+        -- get the host_injections path, and add only the EESSI_CPU_FAMILY at the end
+        local strip_suffix = os.getenv('EESSI_VERSION') .. "/software/" .. os.getenv('EESSI_OS_TYPE') .. "/"
+        strip_suffix = strip_suffix .. "os.getenv('EESSI_SOFTWARE_SUBDIR')
+        local hostInjections = string.gsub(os.getenv('EESSI_SOFTWARE_PATH') or "", strip_suffix, os.getenv('EESSI_CPU_FAMILY'))
 
         -- build final path where the software should be installed
         local packageEasyBuildDir = hostInjections .. "/software/" .. t.modFullName .. "/easybuild"
         local packageDirExists = isDir(packageEasyBuildDir)
-        if not packageDirExists then
+        if previousPackageDirExists and not packageDirExists then
+            local targettedAdvice = "but while the module file exists, the actual software is not entirely shipped with EESSI "
+            advice = advice .. "due to licencing. You will need to install a full copy of the " .. simpleName .. " package where EESSI "
+            advice = advice .. "can find it.\\n"
+            advice = advice .. "Note that a full copy is installed at " .. previoushostInjections .. "/software/" .. t.modFullName ". "
+            advice = advice .. "However, EESSI now expects it in a different location, namely at "
+            advice = advice .. hostInjections .. "/software/" .. t.modFullName "."
+            advice = advice .. "Please re-install the package at the new location."
+            advice = advice .. refer_to_docs
+        elseif not packageDirExists then
             local advice = "but while the module file exists, the actual software is not entirely shipped with EESSI "
             advice = advice .. "due to licencing. You will need to install a full copy of the " .. simpleName .. " package where EESSI "
             advice = advice .. "can find it.\\n"
