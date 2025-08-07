@@ -125,7 +125,7 @@ local function eessi_cuda_and_libraries_enabled_load_hook(t)
         -- simpleName is a module in packagesList
         -- first, check the old host_injections path. If that exists, print a more targetted, explainatory warning
         local previousHostInjections = string.gsub(os.getenv('EESSI_SOFTWARE_PATH') or "", 'versions', 'host_injections')
-        local previousPackageEasyBuildDir = hostInjections .. "/software/" .. t.modFullName .. "/easybuild"
+        local previousPackageEasyBuildDir = previousHostInjections .. "/software/" .. t.modFullName .. "/easybuild"
         local previousPackageDirExists = isDir(previousPackageEasyBuildDir)
 
         -- get the host_injections path, and add only the EESSI_CPU_FAMILY at the end
