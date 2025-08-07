@@ -1199,7 +1199,7 @@ def post_postproc_cuda(self, *args, **kwargs):
 
             # replace files that are not distributable with symlinks into
             # host_injections
-            replace_non_distributable_files_with_symlinks(self.log, self.installdir, self.name, allowlist)
+            replace_binary_non_distributable_files_with_symlinks(self.log, self.installdir, self.name, allowlist)
         else:
             print_msg(f"EESSI hook to respect CUDA license not triggered for installation path {self.installdir}")
     else:
@@ -1249,16 +1249,19 @@ def post_postproc_cudnn(self, *args, **kwargs):
 
             # replace files that are not distributable with symlinks into
             # host_injections
-            replace_non_distributable_files_with_symlinks(self.log, self.installdir, self.name, allowlist)
+            replace_binary_non_distributable_files_with_symlinks(self.log, self.installdir, self.name, allowlist)
         else:
             print_msg(f"EESSI hook to respect cuDDN license not triggered for installation path {self.installdir}")
     else:
         raise EasyBuildError("cuDNN-specific hook triggered for non-cuDNN easyconfig?!")
 
 
-def replace_non_distributable_files_with_symlinks(log, install_dir, pkg_name, allowlist):
+def replace_binary_non_distributable_files_with_symlinks(log, install_dir, pkg_name, allowlist):
     """
     Replace files that cannot be distributed with symlinks into host_injections
+    Since these are binary files, only the CPU family will be included in the prefix,
+    no microarchitecture or accelerator architecture will be included. For example,
+    /cvmfs/software.eessi.io/host_injections/x86_64/suffix/to/actual/file
     """
     # Different packages use different ways to specify which files or file
     # 'types' may be redistributed. For CUDA, the 'EULA.txt' lists full file
@@ -1310,19 +1313,28 @@ def replace_non_distributable_files_with_symlinks(log, install_dir, pkg_name, al
                     # duplication from under host_injections (symlink to a single CUDA or cu* library
                     # installation for all compute capabilities)
                     accel_subdir = get_eessi_envvar("EESSI_ACCELERATOR_TARGET")
-                    software_subdir = get_eessi_envvar("EESSI_SOFTWARE_SUBDIR")
-                    cpu_family = get_eessi_envvar("EESSI_CPU_FAMILY")
                     # If accel_subdir is defined, remove it from the full path
                     # After removal of accel_subdir, host_inj_path will be something like
                     # /cvmfs/software.eessi.io/host_injections/.../x86_64/amd/zen4/.../CUDA/bin/nvcc
                     if accel_subdir:
                         host_inj_path = host_inj_path.replace(accel_subdir, '')
-                    # /cvmfs/software.eessi.io/host_injections/.../x86_64/amd/zen4/.../CUDA/bin/nvcc
-                    # If software_subdir is defined (it should always be...), replace it by only the cpu_family
-                    # After this substitution, host_inj_path will be something like
-                    # /cvmfs/software.eessi.io/host_injections/.../x86_64/.../CUDA/bin/nvcc
-                    if software_subdir and cpu_family:
-                        host_inj_path = host_inj_path.replace(software_subdir, cpu_family)
+                    software_subdir = get_eessi_envvar("EESSI_SOFTWARE_SUBDIR")
+                    cpu_family = get_eessi_envvar("EESSI_CPU_FAMILY")
+                    os_type = get_eessi_envvar("EESSI_OS_TYPE")
+                    eessi_version = get_eessi_envvar("EESSI_VERSION")
+                    if software_subdir and cpu_family and os_type and eessi_version:
+                        # Compose the string to be removed:
+                        partial_path = f"{eessi_version}/software/{os_type}/{software_subdir}"
+                        # After this, host_inj_path will be e.g.
+                        # /cvmfs/software.eessi.io/host_injections/x86_64/software/CUDA/bin/nvcc
+                        host_inj_path = host_inj_path.replace(partial_path, cpu_family)
+                    else:
+                        msg = "Failed to construct path to symlink for file (%s). All of the following values "
+                        msg += "have to be defined: EESSI_SOFTWARE_SUBDIR='%s', EESSI_CPU_FAMILY='%s', "
+                        msg += "EESSI_OS_TYPE='%s', EESSI_VERSION='%s'. Failed to replace non-redistributable file "
+                        msg += "with symlink, aborting..."
+                        raise EasyBuildError(msg, full_path, software_subdir, cpu_family, os_type, eessi_version)
+
                     # make sure source and target of symlink are not the same
                     if full_path == host_inj_path:
                         raise EasyBuildError("Source (%s) and target (%s) are the same location, are you sure you "

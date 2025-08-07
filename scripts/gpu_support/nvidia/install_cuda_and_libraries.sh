@@ -137,10 +137,10 @@ for EASYSTACK_FILE in ${TOPDIR}/easystacks/eessi-*CUDA*.yml; do
     # something like EESSI_SITE_SOFTWARE_PATH, but then with the CPU micro-architecture
     # stripped
     # This sed command will capture everything from the EESSI_SITE_SOFTWARE_PATH up until
-    # the EESSI_SOFTWARE_SUBDIR in a capture group. It will the replace that with the content
+    # the EESSI_VERSION in a capture group. It will the replace that with the content
     # of the capture group and then have the EESSI_CPU_FAMILY appended
-    # Thus EESSI_SITE_CPU_FAMILY_PATH is something like /cvmfs/software.eessi.io/host_injections/.../x86_64
-    EESSI_SITE_CPU_FAMILY_PATH=$(echo "$EESSI_SITE_SOFTWARE_PATH" | sed 's|\(.*\)'"$EESSI_SOFTWARE_SUBDIR"'|\1'"$EESSI_CPU_FAMILY"'|')
+    # Thus EESSI_SITE_CPU_FAMILY_PATH is then something like /cvmfs/software.eessi.io/host_injections/x86_64
+    EESSI_SITE_CPU_FAMILY_PATH=$(echo "$EESSI_SITE_SOFTWARE_PATH" | sed 's|\(.*\)'"$EESSI_VERSION"/software/"$EESSI_OS_TYPE"/"$EESSI_SOFTWARE_SUBDIR"'|\1'"$EESSI_CPU_FAMILY"'|')
     export EASYBUILD_INSTALLPATH=$EESSI_SITE_CPU_FAMILY_PATH
 
     # Install modules in hidden .modules dir to keep track of what was installed before
