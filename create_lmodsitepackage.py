@@ -309,7 +309,7 @@ sitepackage_path = os.path.join(prefix, DOT_LMOD, 'SitePackage.lua')
 # the install path (if it exists)
 accel_subdir = os.getenv("EESSI_ACCELERATOR_TARGET")
 if accel_subdir:
-    sitepackage_path = sitepackage_path.replace("/accel/%s" % accel_subdir, '')
+    sitepackage_path = sitepackage_path.replace("/%s" % accel_subdir, '')
 try:
     os.makedirs(os.path.dirname(sitepackage_path), exist_ok=True)
     with open(sitepackage_path, 'w') as fp:
