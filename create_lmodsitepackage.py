@@ -142,7 +142,7 @@ local function eessi_cuda_and_libraries_enabled_load_hook(t)
             advice = advice .. "can find it.\\n"
             advice = advice .. "Note that a full copy is installed at " .. previousHostInjections .. "/software/" .. t.modFullName .. ". "
             advice = advice .. "However, EESSI now expects it in a different location, namely at "
-            advice = advice .. hostInjections .. "/software/" .. t.modFullName "."
+            advice = advice .. hostInjections .. "/software/" .. t.modFullName .. "."
             advice = advice .. "Please re-install the package at the new location."
             advice = advice .. refer_to_docs
         elseif not packageDirExists then
