@@ -145,6 +145,7 @@ local function eessi_cuda_and_libraries_enabled_load_hook(t)
             advice = advice .. hostInjections .. "/software/" .. t.modFullName .. "."
             advice = advice .. "Please re-install the package at the new location."
             advice = advice .. refer_to_docs
+            LmodError("\\nYou requested to load ", simpleName, " ", advice)
         elseif not packageDirExists then
             local advice = "but while the module file exists, the actual software is not entirely shipped with EESSI "
             advice = advice .. "due to licencing. You will need to install a full copy of the " .. simpleName .. " package where EESSI "
