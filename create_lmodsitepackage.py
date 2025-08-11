@@ -123,7 +123,8 @@ local function eessi_cuda_and_libraries_enabled_load_hook(t)
     local refer_to_docs = "For more information on how to do this, see https://www.eessi.io/docs/site_specific_config/gpu/.\\n"
     if packagesList[simpleName] then
         -- simpleName is a module in packagesList
-        -- first, check the old host_injections path. If that exists, print a more targetted, explainatory warning
+        -- first, check the old host_injections path prior to https://github.com/EESSI/software-layer-scripts/pull/59
+        -- If that exists, print a more targetted, explainatory warning
         local previousHostInjections = string.gsub(os.getenv('EESSI_SOFTWARE_PATH') or "", 'versions', 'host_injections')
         local previousPackageEasyBuildDir = previousHostInjections .. "/software/" .. t.modFullName .. "/easybuild"
         local previousPackageDirExists = isDir(previousPackageEasyBuildDir)
