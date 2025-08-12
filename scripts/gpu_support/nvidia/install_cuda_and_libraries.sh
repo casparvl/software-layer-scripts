@@ -132,7 +132,7 @@ for EASYSTACK_FILE in ${TOPDIR}/easystacks/eessi-*CUDA*.yml; do
 
     # If there is a GPU on the node, the installation path will by default have an
     # accelerator subdirectory. For CUDA and cu*, these are binary installations and
-    # don't care about the target compute capability nor the CPU microarchitecture.
+    # we don't care about the target compute capability nor the CPU microarchitecture.
     # Our hooks are aware of this and therefore expect CUDA to be available under 
     # something like EESSI_SITE_SOFTWARE_PATH, but then with the CPU micro-architecture
     # stripped

@@ -124,7 +124,7 @@ local function eessi_cuda_and_libraries_enabled_load_hook(t)
     if packagesList[simpleName] then
         -- simpleName is a module in packagesList
         -- first, check the old host_injections path prior to https://github.com/EESSI/software-layer-scripts/pull/59
-        -- If that exists, print a more targetted, explainatory warning
+        -- If that exists, print a more targetted, explanatory warning
         local previousHostInjections = string.gsub(os.getenv('EESSI_SOFTWARE_PATH') or "", 'versions', 'host_injections')
         local previousPackageEasyBuildDir = previousHostInjections .. "/software/" .. t.modFullName .. "/easybuild"
         local previousPackageDirExists = isDir(previousPackageEasyBuildDir)
@@ -142,7 +142,7 @@ local function eessi_cuda_and_libraries_enabled_load_hook(t)
             advice = advice .. "due to licencing. You will need to install a full copy of the " .. simpleName .. " package where EESSI "
             advice = advice .. "can find it.\\n"
             advice = advice .. "Note that a full copy is installed at " .. previousHostInjections .. "/software/" .. t.modFullName .. ". "
-            advice = advice .. "However, EESSI now expects it in a different location, namely at "
+            advice = advice .. "However, EESSI expects it in a different location since Aug'25, namely at "
             advice = advice .. hostInjections .. "/software/" .. t.modFullName .. ". "
             advice = advice .. "Please re-install the package at the new location. "
             advice = advice .. refer_to_docs
