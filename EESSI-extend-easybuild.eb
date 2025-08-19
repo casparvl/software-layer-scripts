@@ -70,7 +70,7 @@ modextravars = {
 # EASYBUILD_INSTALLPATH=${EESSI_PREFIX}/software/${EESSI_OS_TYPE}/${EESSI_SOFTWARE_SUBDIR}
 # EASYBUILD_SOURCEPATH=${WORKDIR}/easybuild/sources:${EESSI_SOURCEPATH}
 #
-# And also some optional ones based on the kind of installation
+# And also some optional ones based on the installation mode
 # EASYBUILD_SET_GID_BIT
 # EASYBUILD_GROUP_WRITABLE_INSTALLDIR
 # EASYBUILD_UMASK
