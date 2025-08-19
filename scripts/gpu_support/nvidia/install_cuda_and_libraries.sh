@@ -115,6 +115,7 @@ for EASYSTACK_FILE in ${TOPDIR}/easystacks/eessi-*CUDA*.yml; do
     unset EESSI_PROJECT_INSTALL
     unset EESSI_USER_INSTALL
     export EESSI_SITE_INSTALL=1
+    echo "BEFORE UNLOADING EESSI-EXTEND, EASYBUILD_CUDA_SANITY_CHECK_ERROR_ON_FAILED_CHECKS = $EASYBUILD_CUDA_SANITY_CHECK_ERROR_ON_FAILED_CHECKS"
     module unload EESSI-extend
     ml_av_eessi_extend_out=${tmpdir}/ml_av_eessi_extend.out
     # need to use --ignore_cache to avoid the case that the module was removed (to be
@@ -127,7 +128,9 @@ for EASYSTACK_FILE in ${TOPDIR}/easystacks/eessi-*CUDA*.yml; do
         error="\nNo module for EESSI-extend/${EESSI_EXTEND_VERSION} found\nwhile EESSI has been initialised to use software under ${EESSI_SOFTWARE_PATH}\n"
         fatal_error "${error}"
     fi
+    echo "BEFORE RELOADING EESSI-EXTEND, EASYBUILD_CUDA_SANITY_CHECK_ERROR_ON_FAILED_CHECKS = $EASYBUILD_CUDA_SANITY_CHECK_ERROR_ON_FAILED_CHECKS"
     module --ignore_cache load EESSI-extend/${EESSI_EXTEND_VERSION}
+    echo "AFTER RELOADING EESSI-EXTEND, EASYBUILD_CUDA_SANITY_CHECK_ERROR_ON_FAILED_CHECKS = $EASYBUILD_CUDA_SANITY_CHECK_ERROR_ON_FAILED_CHECKS"
     unset EESSI_EXTEND_VERSION
 
     # If there is a GPU on the node, the installation path will by default have an
