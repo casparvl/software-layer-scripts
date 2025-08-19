@@ -1,5 +1,6 @@
 # Hooks to customize how EasyBuild installs software in EESSI
 # see https://docs.easybuild.io/en/latest/Hooks.html
+# DUMMY CHANGE, SHOULDNT BE UPSTREAMED
 import ast
 import datetime
 import glob
@@ -151,7 +152,7 @@ def parse_list_of_dicts_env(var_name):
     if not re.match(r'^[A-Za-z_][A-Za-z0-9_]*$', var_name):
         raise ValueError(f"Invalid environment variable name: {var_name}")
     list_string = os.getenv(var_name, '[]')
-    
+
     list_of_dicts = []
     try:
         # Try JSON format first
@@ -162,7 +163,7 @@ def parse_list_of_dicts_env(var_name):
             list_of_dicts = ast.literal_eval(list_string)
         except (ValueError, SyntaxError):
             raise ValueError(f"Environment variable '{var_name}' does not contain a valid list of dictionaries.")
-    
+
     return list_of_dicts
 
 
@@ -211,7 +212,7 @@ def post_ready_hook(self, *args, **kwargs):
         parallel = self.parallel
     else:
         parallel = self.cfg['parallel']
-    
+
     if parallel == 1:
         return  # no need to limit if already using 1 core
 
@@ -733,7 +734,7 @@ def pre_configure_hook_score_p(self, *args, **kwargs):
 def pre_configure_hook_vsearch(self, *args, **kwargs):
     """
     Pre-configure hook for VSEARCH
-    - Workaround for a Zlib macro being renamed in Gentoo, see https://bugs.gentoo.org/383179 
+    - Workaround for a Zlib macro being renamed in Gentoo, see https://bugs.gentoo.org/383179
       (solves "expected initializer before 'OF'" errors)
     """
     if self.name == 'VSEARCH':
