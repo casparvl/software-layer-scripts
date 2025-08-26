@@ -400,6 +400,14 @@ else
         if [ -f ${easystack_file} ]; then
             echo_green "Feeding easystack file ${easystack_file} to EasyBuild..."
 
+            # DEBUG OUTPUT
+            echo "CURRENT LMOD CONFIG:"
+            module --config
+            echo "CURRENT SITE PACKAGE FILE ($EESSI_SOFTWARE_PATH/.lmod/SitePackage.lua):"
+            cat $EESSI_SOFTWARE_PATH/.lmod/SitePackage.lua
+            echo "CURRENT CONTENTS OF HOST_INJECTIONS/x86_64/software/CUDA"
+            ls -al /cvmfs/software.eessi.io/host_injections/x86_64/software/CUDA/
+
             if [[ ${easystack_file} == *"/rebuilds/"* ]]; then
                 ${EB} --easystack ${easystack_file} --rebuild
             else
