@@ -7,6 +7,7 @@ import json
 import os
 import re
 import socket
+import tarfile
 from typing import NamedTuple
 
 import easybuild.tools.environment as env
