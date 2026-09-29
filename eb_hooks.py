@@ -1201,6 +1201,7 @@ def pre_prepare_hook_uv_source_date_epoch(self, *args, **kwargs):
     
 
     if self.version == "0.10.9":
+        cpu_target = get_eessi_envvar('EESSI_SOFTWARE_SUBDIR')
         if cpu_target == CPU_TARGET_A64FX:
             cpu_target = get_eessi_envvar('EESSI_SOFTWARE_SUBDIR')
             source_name = f"{self.name}-{self.version}.tar.gz"
