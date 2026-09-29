@@ -1198,55 +1198,57 @@ def pre_prepare_hook_uv_source_date_epoch(self, *args, **kwargs):
         raise EasyBuildError(
             "uv-specific hook triggered for non-uv easyconfig?!"
         )
-
-    source_name = f"{self.name}-{self.version}.tar.gz"
-
-    sources = [
-        src for src in self.src
-        if src['name'] == source_name
-    ]
-
-    if len(sources) != 1:
-        raise EasyBuildError(
-            "Expected exactly one source archive named %s, found %d",
+    
+    cpu_target = get_eessi_envvar('EESSI_SOFTWARE_SUBDIR')
+    if cpu_target == CPU_TARGET_A64FX:
+        source_name = f"{self.name}-{self.version}.tar.gz"
+    
+        sources = [
+            src for src in self.src
+            if src['name'] == source_name
+        ]
+    
+        if len(sources) != 1:
+            raise EasyBuildError(
+                "Expected exactly one source archive named %s, found %d",
+                source_name,
+                len(sources),
+            )
+    
+        source_path = sources[0]['path']
+    
+        try:
+            with tarfile.open(source_path, 'r:*') as archive:
+                mtimes = [
+                    member.mtime
+                    for member in archive.getmembers()
+                    if member.isfile()
+                ]
+        except (OSError, tarfile.TarError) as err:
+            raise EasyBuildError(
+                "Failed to determine SOURCE_DATE_EPOCH from %s: %s",
+                source_path,
+                err,
+            )
+    
+        if not mtimes:
+            raise EasyBuildError(
+                "Could not determine SOURCE_DATE_EPOCH: "
+                "no files found in source archive %s",
+                source_path,
+            )
+    
+        source_date_epoch = str(max(mtimes))
+    
+        env.setvar('SOURCE_DATE_EPOCH', source_date_epoch)
+    
+        print_msg(
+            "Set SOURCE_DATE_EPOCH=%s for %s %s based on source archive %s",
+            source_date_epoch,
+            self.name,
+            self.version,
             source_name,
-            len(sources),
         )
-
-    source_path = sources[0]['path']
-
-    try:
-        with tarfile.open(source_path, 'r:*') as archive:
-            mtimes = [
-                member.mtime
-                for member in archive.getmembers()
-                if member.isfile()
-            ]
-    except (OSError, tarfile.TarError) as err:
-        raise EasyBuildError(
-            "Failed to determine SOURCE_DATE_EPOCH from %s: %s",
-            source_path,
-            err,
-        )
-
-    if not mtimes:
-        raise EasyBuildError(
-            "Could not determine SOURCE_DATE_EPOCH: "
-            "no files found in source archive %s",
-            source_path,
-        )
-
-    source_date_epoch = str(max(mtimes))
-
-    env.setvar('SOURCE_DATE_EPOCH', source_date_epoch)
-
-    print_msg(
-        "Set SOURCE_DATE_EPOCH=%s for %s %s based on source archive %s",
-        source_date_epoch,
-        self.name,
-        self.version,
-        source_name,
-    )
 
 def post_prepare_hook_llvm_a64fx(self, *args, **kwargs):
     """
