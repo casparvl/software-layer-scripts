@@ -7,6 +7,7 @@ import json
 import os
 import re
 import socket
+import tarfile
 from typing import NamedTuple
 
 import easybuild.tools.environment as env
@@ -1197,6 +1198,75 @@ def pre_prepare_hook_LAMMPS_kokkos_CUDA_families(self, *args, **kwargs):
                     updated_cuda_cc = [v.replace('12.0f', '12.0') for v in cuda_cc]
                     update_build_option('cuda_compute_capabilities', updated_cuda_cc)
 
+    
+def pre_prepare_hook_uv_source_date_epoch(self, *args, **kwargs):
+    """
+    Set SOURCE_DATE_EPOCH for uv based on the timestamp recorded in the
+    upstream source archive.
+
+    maturin uses SOURCE_DATE_EPOCH when setting timestamps on wheel entries.
+    Using a timestamp derived from the source archive makes this deterministic
+    across builds. This value is missing in A64FX builds so we need to handle
+    it explicilty here when building uv.
+    """
+    if self.name != 'uv':
+        raise EasyBuildError(
+            "uv-specific hook triggered for non-uv easyconfig?!"
+        )
+    
+
+    if self.version == "0.10.9":
+        cpu_target = get_eessi_envvar('EESSI_SOFTWARE_SUBDIR')
+        if cpu_target == CPU_TARGET_A64FX:
+            cpu_target = get_eessi_envvar('EESSI_SOFTWARE_SUBDIR')
+            source_name = f"{self.name}-{self.version}.tar.gz"
+        
+            sources = [
+                src for src in self.src
+                if src['name'] == source_name
+            ]
+        
+            if len(sources) != 1:
+                raise EasyBuildError(
+                    "Expected exactly one source archive named %s, found %d",
+                    source_name,
+                    len(sources),
+                )
+        
+            source_path = sources[0]['path']
+        
+            try:
+                with tarfile.open(source_path, 'r:*') as archive:
+                    mtimes = [
+                        member.mtime
+                        for member in archive.getmembers()
+                        if member.isfile()
+                    ]
+            except (OSError, tarfile.TarError) as err:
+                raise EasyBuildError(
+                    "Failed to determine SOURCE_DATE_EPOCH from %s: %s",
+                    source_path,
+                    err,
+                )
+        
+            if not mtimes:
+                raise EasyBuildError(
+                    "Could not determine SOURCE_DATE_EPOCH: "
+                    "no files found in source archive %s",
+                    source_path,
+                )
+        
+            source_date_epoch = str(max(mtimes))
+        
+            env.setvar('SOURCE_DATE_EPOCH', source_date_epoch)
+        
+            print_msg(
+                "Set SOURCE_DATE_EPOCH=%s for %s %s based on source archive %s",
+                source_date_epoch,
+                self.name,
+                self.version,
+                source_name,
+            )
 
 def post_prepare_hook_llvm_a64fx(self, *args, **kwargs):
     """
@@ -1217,7 +1287,6 @@ def pre_configure_hook(self, *args, **kwargs):
     # (solves "expected initializer before 'OF'" errors)
     if self.name in ['FreeXL', 'libspatialite', 'VSEARCH']:
         self.cfg.update('configopts', 'CPPFLAGS="-DOF=_Z_OF ${CPPFLAGS}"')
-
 
 def pre_configure_hook_BLIS(self, *args, **kwargs):
     """
@@ -2470,6 +2539,7 @@ PRE_PREPARE_HOOKS = {
     'LLVM': pre_prepare_hook_llvm_a64fx,
     'PyTorch': pre_prepare_hook_pytorch,
     'Rust': pre_prepare_hook_llvm_a64fx,
+    'uv': pre_prepare_hook_uv_source_date_epoch,
 }
 
 POST_PREPARE_HOOKS = {
