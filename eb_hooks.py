@@ -67,31 +67,32 @@ EESSI_IGNORE_ZEN4_GCC1220_ENVVAR="EESSI_IGNORE_LMOD_ERROR_ZEN4_GCC1220"
 
 STACK_REPROD_SUBDIR = 'reprod'
 
-EESSI_SUPPORTED_TOP_LEVEL_TOOLCHAINS = {
-    '2023.06': [
-        {'name': 'foss', 'version': '2022b'},
-        {'name': 'foss', 'version': '2023a'},
-        {'name': 'foss', 'version': '2023b'},
-    ],
-    '2025.06': [
-        {'name': 'foss', 'version': '2024a'},
-        {'name': 'foss', 'version': '2025a'},
-        {'name': 'foss', 'version': '2025b'},
-    ],
-    '2026.06': [
-        {'name': 'foss', 'version': '2026.1'},
-        {'name': 'lfoss', 'version': '2026.1'},
-    ],
-}
-if EASYBUILD_VERSION >= '5.2.0':
-    EESSI_SUPPORTED_TOP_LEVEL_TOOLCHAINS['2025.06'].append(
-        {'name': 'lfoss', 'version': '2025b'}
-    )
 
-if EASYBUILD_VERSION >= '5.3.1':
-    EESSI_SUPPORTED_TOP_LEVEL_TOOLCHAINS['2025.06'].append(
-        {'name': 'rompi', 'version': '2025a'}
-    )
+def load_supported_top_level_toolchains():
+    """
+    Load the supported top-level toolchains per EESSI version from eessi_supported_toolchains.json,
+    which is located next to this hooks file (both in the software-layer-scripts repository, and when installed
+    in <EESSI prefix>/init/easybuild). Toolchains that require a more recent EasyBuild version than the one
+    being used (as specified via 'min_easybuild_version') are left out.
+    """
+    toolchains_file = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'eessi_supported_toolchains.json')
+    try:
+        with open(toolchains_file) as fh:
+            toolchains = json.load(fh)
+    except (OSError, ValueError) as err:
+        raise EasyBuildError(f"Failed to load supported toolchains from {toolchains_file} "
+                             f"(it is expected to be located next to the EasyBuild hooks file): {err}")
+
+    return {
+        eessi_version: [
+            {'name': tc['name'], 'version': tc['version']} for tc in tcs
+            if EASYBUILD_VERSION >= tc.get('min_easybuild_version', '0')
+        ]
+        for eessi_version, tcs in toolchains.items()
+    }
+
+
+EESSI_SUPPORTED_TOP_LEVEL_TOOLCHAINS = load_supported_top_level_toolchains()
 
 # Supported compute capabilities by CUDA toolkit version
 # Obtained by installing all CUDAs from 12.0.0 to 13.3.0, then using:
