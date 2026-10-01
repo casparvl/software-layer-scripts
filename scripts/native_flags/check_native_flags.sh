@@ -190,7 +190,7 @@ for compiler in $(echo ${!compilers[@]} | tr ' ' '\n' | sort); do
         echo "${flags}" > ${reference_file}
         echo_green ">> Generated ${reference_file}"
     elif [[ ! -f ${reference_file} ]]; then
-        echo_yellow ">> WARNING: no reference found for ${compiler_type} ${version} (${reference_file})."
+        echo_yellow ">> No reference found for ${compiler_type} ${version} (${reference_file})."
         echo_yellow "   '${native_flag}' translates to the following flags for ${compiler} on this host:"
         echo "${flags}" | sed 's/^/     /'
         echo_yellow "To create a reference file, simply copy the above list of flags (without indentiation) into the file ${reference_file} and add that to the `EESSI/software-layer-scripts` repository."
