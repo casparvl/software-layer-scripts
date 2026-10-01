@@ -51,6 +51,28 @@ jobs:
               module load EESSI-extend
               diff "$TEMP_FILE" "$EASYBUILD_HOOKS"
 
+        - name: Check whether eessi_supported_toolchains.json (used by eb_hooks.py) is up-to-date
+          if: ${{ github.event_name == 'pull_request' }}
+          run: |
+              FILE="eessi_supported_toolchains.json"
+              TEMP_FILE="$(mktemp)"
+
+              # Fetch base branch
+              git fetch origin ${{ github.base_ref }}
+
+              # Check if the file has changed in the PR
+              if git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -q "^$FILE$"; then
+                echo "$FILE changed in PR. Using PR version."
+                cp "$FILE" "$TEMP_FILE"
+              else
+                echo "File not changed in PR. Using default branch version."
+                git show origin/${{ github.base_ref }}:$FILE > "$TEMP_FILE"
+              fi
+
+              # Compare to what is shipped next to the hooks in the repository
+              module load EESSI-extend
+              diff "$TEMP_FILE" "$(dirname $EASYBUILD_HOOKS)/$FILE"
+
   check_eb_hooks_functionality:
     runs-on: ubuntu-24.04
     strategy:
