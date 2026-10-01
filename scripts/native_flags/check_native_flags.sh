@@ -119,7 +119,7 @@ function provided_by_module() {
 echo ">> Checking native compiler flags for CPU target ${EESSI_SOFTWARE_SUBDIR} (EESSI ${EESSI_VERSION})"
 echo ">> Native architecture flag: ${native_flag}"
 
-toolchains=$(python3 ${SCRIPT_DIR}/get_supported_toolchains.py ${TOPDIR}/eb_hooks.py ${EESSI_VERSION})
+toolchains=$(python3 ${SCRIPT_DIR}/get_supported_toolchains.py ${TOPDIR}/eessi_supported_toolchains.json ${EESSI_VERSION})
 check_exit_code $? ">> Supported toolchains in EESSI ${EESSI_VERSION}: $(echo ${toolchains})" \
     "Failed to determine supported toolchains for EESSI ${EESSI_VERSION}"
 
