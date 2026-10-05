@@ -47,38 +47,66 @@ def test_json_format():
         assert len(pairs) == len(set(pairs)), f"Duplicate toolchains for {eessi_version}"
 
 
-def test_load_default_location():
+DEFAULT_FILENAME = 'eessi_supported_toolchains.json'
+
+
+@pytest.fixture
+def default_dir(monkeypatch, tmp_path):
+    """Make the 'directory of eb_hooks.py' (i.e. the default location of the JSON file) an empty temporary dir."""
+    monkeypatch.setattr(eb_hooks, '__file__', str(tmp_path / 'eb_hooks.py'))
+    return tmp_path
+
+
+def test_load_default_location(default_dir):
     """Without the environment variable, the file next to eb_hooks.py is used."""
-    result = eb_hooks.load_supported_top_level_toolchains()
-    assert set(result) == set(json.load(open(TOOLCHAINS_FILE)))
-    for tcs in result.values():
-        for tc in tcs:
-            assert set(tc) == {'name', 'version'}
+    write_json(default_dir / DEFAULT_FILENAME, {
+        '2099.01': [{'name': 'foo', 'version': '1'}, {'name': 'bar', 'version': '2'}],
+        '2099.02': [{'name': 'baz', 'version': '3'}],
+    })
+    assert eb_hooks.load_supported_top_level_toolchains() == {
+        '2099.01': [{'name': 'foo', 'version': '1'}, {'name': 'bar', 'version': '2'}],
+        '2099.02': [{'name': 'baz', 'version': '3'}],
+    }
 
 
-@pytest.mark.parametrize('eb_version, lfoss_present, rompi_present', [
-    ('5.1.0', False, False),
-    ('5.2.0', True, False),
-    ('5.3.0', True, False),
-    ('5.3.1', True, True),
-    ('5.4.0', True, True),
+@pytest.mark.parametrize('eb_version, expected', [
+    ('4.9.0', ['always']),
+    ('5.2.0', ['always', 'since_5_2_0']),
+    ('5.2.1', ['always', 'since_5_2_0']),
+    ('5.3.0', ['always', 'since_5_2_0']),
+    ('5.3.1', ['always', 'since_5_2_0', 'since_5_3_1']),
+    ('6.0.0', ['always', 'since_5_2_0', 'since_5_3_1']),
 ])
-def test_min_easybuild_version(monkeypatch, eb_version, lfoss_present, rompi_present):
+def test_min_easybuild_version(monkeypatch, default_dir, eb_version, expected):
+    """Toolchains with a 'min_easybuild_version' are only included for that EasyBuild version or newer."""
+    write_json(default_dir / DEFAULT_FILENAME, {
+        '2099.01': [
+            {'name': 'always', 'version': '1'},
+            {'name': 'since_5_2_0', 'version': '1', 'min_easybuild_version': '5.2.0'},
+            {'name': 'since_5_3_1', 'version': '1', 'min_easybuild_version': '5.3.1'},
+        ],
+        '2099.02': [
+            {'name': 'only_future', 'version': '1', 'min_easybuild_version': '99.0.0'},
+        ],
+    })
     monkeypatch.setattr(eb_hooks, 'EASYBUILD_VERSION', eb_version)
-    tcs = eb_hooks.load_supported_top_level_toolchains()['2025.06']
-    assert ({'name': 'lfoss', 'version': '2025b'} in tcs) == lfoss_present
-    assert ({'name': 'rompi', 'version': '2025a'} in tcs) == rompi_present
-    # toolchains without a minimum EasyBuild version are always there
-    assert {'name': 'foss', 'version': '2025b'} in tcs
+    result = eb_hooks.load_supported_top_level_toolchains()
+    assert [tc['name'] for tc in result['2099.01']] == expected
+    # An EESSI version for which no toolchain is supported by this EasyBuild version is kept, with an empty list
+    assert result['2099.02'] == []
+    # The minimum version is not part of the returned toolchain dicts
+    assert all(set(tc) == {'name', 'version'} for tcs in result.values() for tc in tcs)
 
 
-def test_envvar_overrides_location(monkeypatch, tmp_path):
-    custom = write_json(tmp_path / 'custom.json', {'2099.01': [{'name': 'foo', 'version': '1'}]})
+def test_envvar_overrides_location(monkeypatch, default_dir, tmp_path):
+    write_json(default_dir / DEFAULT_FILENAME, {'2099.01': [{'name': 'default', 'version': '1'}]})
+    custom = write_json(tmp_path / 'custom.json', {'2099.01': [{'name': 'custom', 'version': '1'}]})
     monkeypatch.setenv(ENVVAR, custom)
-    assert eb_hooks.load_supported_top_level_toolchains() == {'2099.01': [{'name': 'foo', 'version': '1'}]}
+    assert eb_hooks.load_supported_top_level_toolchains() == {'2099.01': [{'name': 'custom', 'version': '1'}]}
 
 
-def test_envvar_missing_file(monkeypatch, tmp_path):
+def test_envvar_missing_file(monkeypatch, default_dir, tmp_path):
+    default_file = write_json(default_dir / DEFAULT_FILENAME, {'2099.01': []})
     missing = str(tmp_path / 'does_not_exist.json')
     monkeypatch.setenv(ENVVAR, missing)
     with pytest.raises(EasyBuildError) as excinfo:
@@ -86,28 +114,37 @@ def test_envvar_missing_file(monkeypatch, tmp_path):
     msg = str(excinfo.value)
     assert missing in msg
     assert ENVVAR in msg
-    # the file in the default location exists, so the user should be pointed to it and told how to use it
-    assert TOOLCHAINS_FILE in msg
+    # a file exists in the default location, so the user should be pointed to it and told how to use it
+    assert default_file in msg
     assert f"unset {ENVVAR}" in msg
 
 
-def test_missing_default_file(monkeypatch, tmp_path):
-    monkeypatch.setattr(eb_hooks, '__file__', str(tmp_path / 'eb_hooks.py'))
+def test_envvar_missing_file_no_default(monkeypatch, default_dir, tmp_path):
+    missing = str(tmp_path / 'does_not_exist.json')
+    monkeypatch.setenv(ENVVAR, missing)
     with pytest.raises(EasyBuildError) as excinfo:
         eb_hooks.load_supported_top_level_toolchains()
     msg = str(excinfo.value)
-    assert str(tmp_path / 'eessi_supported_toolchains.json') in msg
+    assert missing in msg
+    assert 'unset' not in msg
+
+
+def test_missing_default_file(default_dir):
+    with pytest.raises(EasyBuildError) as excinfo:
+        eb_hooks.load_supported_top_level_toolchains()
+    msg = str(excinfo.value)
+    assert str(default_dir / DEFAULT_FILENAME) in msg
     assert ENVVAR in msg  # mentions how to configure the location
     assert 'unset' not in msg
 
 
 @pytest.mark.parametrize('use_envvar', [False, True])
-def test_invalid_json(monkeypatch, tmp_path, use_envvar):
-    bad = write_json(tmp_path / 'bad.json', '{"2025.06": [')
+def test_invalid_json(monkeypatch, default_dir, tmp_path, use_envvar):
     if use_envvar:
+        bad = write_json(tmp_path / 'bad.json', '{"2099.01": [')
         monkeypatch.setenv(ENVVAR, bad)
     else:
-        monkeypatch.setattr(eb_hooks, '__file__', str(tmp_path / 'eb_hooks.py'))
-        os.rename(bad, tmp_path / 'eessi_supported_toolchains.json')
-    with pytest.raises(EasyBuildError, match='does not contain valid JSON'):
+        bad = write_json(default_dir / DEFAULT_FILENAME, '{"2099.01": [')
+    with pytest.raises(EasyBuildError, match='does not contain valid JSON') as excinfo:
         eb_hooks.load_supported_top_level_toolchains()
+    assert bad in str(excinfo.value)
