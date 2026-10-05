@@ -67,21 +67,46 @@ EESSI_IGNORE_ZEN4_GCC1220_ENVVAR="EESSI_IGNORE_LMOD_ERROR_ZEN4_GCC1220"
 
 STACK_REPROD_SUBDIR = 'reprod'
 
+# Environment variable that can be used to point to a custom JSON file with the supported top-level toolchains
+SUPPORTED_TOOLCHAINS_FILE_ENVVAR = 'EESSI_SUPPORTED_TOOLCHAINS_FILE'
+
 
 def load_supported_top_level_toolchains():
     """
-    Load the supported top-level toolchains per EESSI version from eessi_supported_toolchains.json,
-    which is located next to this hooks file (both in the software-layer-scripts repository, and when installed
-    in <EESSI prefix>/init/easybuild). Toolchains that require a more recent EasyBuild version than the one
-    being used (as specified via 'min_easybuild_version') are left out.
+    Load the supported top-level toolchains per EESSI version from a JSON file.
+
+    The location of the JSON file can be set through the environment variable EESSI_SUPPORTED_TOOLCHAINS_FILE.
+    If that is not set, eessi_supported_toolchains.json is expected next to this hooks file (both in the
+    software-layer-scripts repository, and when installed in <EESSI prefix>/init/easybuild).
+
+    Toolchains that require a more recent EasyBuild version than the one being used (as specified via
+    'min_easybuild_version') are left out.
+
+    Returns:
+        supported_toolchains (dict): maps each EESSI version to a list of dicts with the 'name' and 'version'
+            of a supported top-level toolchain
     """
-    toolchains_file = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'eessi_supported_toolchains.json')
+    default_file = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'eessi_supported_toolchains.json')
+    toolchains_file = os.getenv(SUPPORTED_TOOLCHAINS_FILE_ENVVAR)
+    envvar_msg = f" (set via ${SUPPORTED_TOOLCHAINS_FILE_ENVVAR})"
+    if not toolchains_file:
+        toolchains_file = default_file
+        envvar_msg = ""
+
     try:
         with open(toolchains_file) as fh:
             toolchains = json.load(fh)
-    except (OSError, ValueError) as err:
-        raise EasyBuildError(f"Failed to load supported toolchains from {toolchains_file} "
-                             f"(it is expected to be located next to the EasyBuild hooks file): {err}")
+    except OSError as err:
+        msg = (f"Failed to read the file with supported toolchains {toolchains_file}{envvar_msg}: {err}. "
+               f"By default, it is expected next to the EasyBuild hooks file; its location can be configured "
+               f"through the environment variable {SUPPORTED_TOOLCHAINS_FILE_ENVVAR}.")
+        if envvar_msg and os.path.isfile(default_file):
+            msg += (f" Note that a file with supported toolchains does exist in the default location {default_file}. "
+                    f"If that is the file you intended to use, unset {SUPPORTED_TOOLCHAINS_FILE_ENVVAR}.")
+        raise EasyBuildError(msg)
+    except ValueError as err:
+        raise EasyBuildError(f"The file with supported toolchains {toolchains_file}{envvar_msg} "
+                             f"does not contain valid JSON: {err}")
 
     return {
         eessi_version: [
