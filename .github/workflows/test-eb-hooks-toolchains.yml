@@ -4,13 +4,13 @@ on:
   push:
     paths:
       - eb_hooks.py
-      - eessi_supported_toolchains.json
+      - eessi_supported_toolchains.toml
       - tests/eb_hooks/**
       - .github/workflows/test-eb-hooks-toolchains.yml
   pull_request:
     paths:
       - eb_hooks.py
-      - eessi_supported_toolchains.json
+      - eessi_supported_toolchains.toml
       - tests/eb_hooks/**
       - .github/workflows/test-eb-hooks-toolchains.yml
   workflow_dispatch:

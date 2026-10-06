@@ -225,7 +225,7 @@ fi
 # Copy over EasyBuild hooks file used for installations (and the files it needs, which have to be located next to it)
 easybuild_init_files=(
     eb_hooks.py
-    eessi_supported_toolchains.json
+    eessi_supported_toolchains.toml
 )
 copy_files_by_list ${TOPDIR} ${INSTALL_PREFIX}/init/easybuild "${easybuild_init_files[@]}"
 

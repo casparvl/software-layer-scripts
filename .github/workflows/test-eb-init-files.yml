@@ -30,7 +30,7 @@ jobs:
           if: ${{ github.event_name == 'pull_request' }}
           run: |
               # Files that are installed in the same directory as the hooks, and have to be up-to-date
-              FILES=(eb_hooks.py eessi_supported_toolchains.json)
+              FILES=(eb_hooks.py eessi_supported_toolchains.toml)
 
               # Fetch base branch
               git fetch origin ${{ github.base_ref }}
