@@ -322,6 +322,17 @@ for ACCEL_OVERRIDE in "${EESSI_ACCELERATOR_TARGET_OVERRIDES[@]}"; do
     echo "Executing command to build software:"
     echo "$software_layer_dir/eessi_container.sh ${COMMON_ARGS[@]} ${BUILD_STEP_ARGS_ACCEL[@]}"
     echo "                     -- $software_layer_dir/install_software_layer.sh \"${INSTALL_SCRIPT_ARGS[@]}\" \"$@\" 2>&1 | tee -a ${build_outerr}"
+    if [[ -n "${EESSI_BOT_INTERACTIVE}" ]]; then
+        # Interactive debugging: same setup as above, but drop into a shell in the build container
+        # instead of running the install script (later --mode overrides the --mode exec in COMMON_ARGS).
+        # No 'tee' here as it would break the interactive terminal; no resume/tarball handling either.
+        echo "bot/build.sh: EESSI_BOT_INTERACTIVE is set, starting an interactive shell instead of the build"
+        echo "bot/build.sh: to run the build step manually from within the shell, use:"
+        echo "                     $software_layer_dir/install_software_layer.sh ${INSTALL_SCRIPT_ARGS[@]} $@"
+        $software_layer_dir/eessi_container.sh "${COMMON_ARGS[@]}" "${BUILD_STEP_ARGS_ACCEL[@]}" --mode shell
+        # only a single (the first) accelerator target is supported in interactive mode
+        exit 0
+    fi
     $software_layer_dir/eessi_container.sh "${COMMON_ARGS[@]}" "${BUILD_STEP_ARGS_ACCEL[@]}" \
                          -- $software_layer_dir/install_software_layer.sh "${INSTALL_SCRIPT_ARGS[@]}" "$@" 2>&1 | tee -a ${build_outerr}
 
