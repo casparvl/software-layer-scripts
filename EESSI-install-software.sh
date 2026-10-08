@@ -460,22 +460,25 @@ else
 
             echo_green "All set, let's start installing some software with EasyBuild v${eb_version} in ${EASYBUILD_INSTALLPATH}..."
 
+            # full EasyBuild command for this easystack file (also shown in the debug shell messages)
+            if [[ ${easystack_file} == *"/rebuilds/"* ]]; then
+                eb_cmd="${EB} --easystack ${easystack_file} --rebuild"
+            else
+                eb_cmd="${EB} --easystack ${easystack_file} --robot"
+            fi
+
             # If EESSI_INTERACTIVE_BUILD=before, you'll get a debug shell right before easybuild starts
-            # You can execute the ${EB} --easystack ${easystack_file} manually, or just exist the shell again
+            # You can execute ${eb_cmd} manually, or just exit the shell again
             # to let the script continue (e.g. because the item you want to debug is in the 2nd iteration of this for-loop over
             # easystack files)
             if [[ "${EESSI_INTERACTIVE_BUILD}" == "before" ]]; then
-                debug_shell "environment is ready to run: ${EB} --easystack ${easystack_file} --robot"
+                debug_shell "environment is ready to run: ${eb_cmd}"
             fi
 
             if [ -f ${easystack_file} ]; then
                 echo_green "Feeding easystack file ${easystack_file} to EasyBuild..."
 
-                if [[ ${easystack_file} == *"/rebuilds/"* ]]; then
-                    ${EB} --easystack ${easystack_file} --rebuild
-                else
-                    ${EB} --easystack ${easystack_file} --robot
-                fi
+                ${eb_cmd}
                 ec=$?
 
                 # copy EasyBuild log file if EasyBuild exited with an error
@@ -483,7 +486,7 @@ else
                     # If easybuild had a non-zero exit code, and EESSI_INTERACTIVE_BUILD=onfail, you'll get a debug
                     # shell so you can debug the failure
                     if [[ "${EESSI_INTERACTIVE_BUILD}" == "onfail" ]]; then
-                        debug_shell "EasyBuild failed with exit code ${ec} for ${easystack_file}"
+                        debug_shell "EasyBuild failed with exit code ${ec} for command: ${eb_cmd}"
                     fi
                     eb_last_log=$(eb --last-log | grep ^/.*\.log)
                     # copy to current working directory if file exhists
