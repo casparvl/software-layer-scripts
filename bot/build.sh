@@ -342,12 +342,15 @@ RESUME_DIR=""
 # Ask the user to choose a number between $4 (default 1) and $2 for $1, default $3, result in INTERACTIVE_CHOICE
 interactive_choice() {
     local what="$1" n="$2" default="$3" min="${4:-1}" answer
+    # loop until we get a valid answer
     while true; do
+        # Make sure to use defautl & exist loop if read returns non-zero, e.g. at EOF because user pressed Ctrl+D / terminal disappears (avoid infinite loop)
         if ! read -r -p "bot/build.sh: select ${what} [${min}-${n}, default ${default}]: " answer < /dev/tty; then
             INTERACTIVE_CHOICE=${default}
             return
         fi
         answer=${answer:-${default}}
+        # Check answer is valid and return
         if [[ "${answer}" =~ ^[0-9]+$ ]] && (( answer >= min && answer <= n )); then
             INTERACTIVE_CHOICE=${answer}
             return
