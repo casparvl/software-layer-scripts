@@ -32,12 +32,14 @@
 #            EasyBuild is called
 #   onfail - run the build, and start a shell when EasyBuild fails (or the build script exits non-zero)
 # The state of the bot's build step (a tarball in previous_tmp/build_step) is resumed, and one accelerator target is
-# handled. Select them with EESSI_INTERACTIVE_BUILD_RESUME_FROM (a tmp directory or tarball) and
-# EESSI_INTERACTIVE_BUILD_ACCELERATOR (e.g. nvidia/cc80). If both are set, they are used as given. If one or both are
+# handled. Select them with EESSI_INTERACTIVE_BUILD_RESUME_FROM (a tmp directory or tarball, or 'none' to not resume from
+# anything and start from scratch) and EESSI_INTERACTIVE_BUILD_ACCELERATOR (e.g. nvidia/cc80). If both are set, they are
+# used as given. If one or both are
 # unset and there is a terminal, the available tarballs and accelerator targets are listed and you are asked for the
-# missing one(s). Without a terminal, the missing one(s) are inferred (default: the last accelerator target and the newest
-# tarball, or the accelerator target / tarball that belongs to the other one, if there are as many tarballs as
-# accelerator targets), and a warning is printed. Nothing is saved, no tarball is created.
+# missing one(s). Without a terminal, the missing one(s) are inferred and a warning is printed. If there are as many
+# tarballs as accelerator targets, the accelerator target / tarball that belongs to the other one is inferred (the n-th
+# tarball was written after the n-th accelerator build). Otherwise they cannot be paired: the default accelerator target is
+# the last one, and the default is not to resume from a tarball. Nothing is saved, no tarball is created.
 
 # stop as soon as something fails
 set -e
@@ -329,22 +331,24 @@ fi
 RESUME_DIR=""
 
 # interactive debugging only handles a single accelerator target, and resumes from a single tarball of the bot's build step.
-# - If both EESSI_INTERACTIVE_BUILD_ACCELERATOR and EESSI_INTERACTIVE_BUILD_RESUME_FROM are set, we use them as given.
+# - If both EESSI_INTERACTIVE_BUILD_ACCELERATOR and EESSI_INTERACTIVE_BUILD_RESUME_FROM are set, we use them as given
+#   (EESSI_INTERACTIVE_BUILD_RESUME_FROM=none means: do not resume from a tarball, i.e. don't pass --resume).
 # - If one or both are unset and we have a terminal, we list the options and ask for the missing one(s).
 # - If one or both are unset and there is no terminal, we cannot ask: we infer the missing one(s) and print a warning.
-# The suggested (default) accelerator target is the last one, and the default tarball the newest one. If the other one is
-# known and there are as many tarballs as accelerator targets, the default is the one that belongs to it instead (the
-# n-th tarball was written after the n-th accelerator build).
-# Ask the user to choose a number between 1 and $2 for $1, default $3, result in INTERACTIVE_CHOICE
+# The suggested (default) accelerator target is the last one. The default tarball is the one that belongs to the selected
+# accelerator target (the n-th tarball was written after the n-th accelerator build), which we can only tell if there are
+# as many tarballs as accelerator targets; otherwise the default is not to resume from a tarball. Likewise, if a tarball
+# from the list is given and the counts are equal, the default accelerator target is the one that belongs to it.
+# Ask the user to choose a number between $4 (default 1) and $2 for $1, default $3, result in INTERACTIVE_CHOICE
 interactive_choice() {
-    local what="$1" n="$2" default="$3" answer
+    local what="$1" n="$2" default="$3" min="${4:-1}" answer
     while true; do
-        if ! read -r -p "bot/build.sh: select ${what} [1-${n}, default ${default}]: " answer < /dev/tty; then
+        if ! read -r -p "bot/build.sh: select ${what} [${min}-${n}, default ${default}]: " answer < /dev/tty; then
             INTERACTIVE_CHOICE=${default}
             return
         fi
         answer=${answer:-${default}}
-        if [[ "${answer}" =~ ^[0-9]+$ ]] && (( answer >= 1 && answer <= n )); then
+        if [[ "${answer}" =~ ^[0-9]+$ ]] && (( answer >= min && answer <= n )); then
             INTERACTIVE_CHOICE=${answer}
             return
         fi
@@ -364,12 +368,13 @@ if [[ -n "${EESSI_INTERACTIVE_BUILD}" ]]; then
         echo "    [$((i+1))] '${EESSI_ACCELERATOR_TARGET_OVERRIDES[$i]}'"
     done
     echo "  build step tarballs in ${TARBALL_TMP_BUILD_STEP_DIR} (oldest first):"
+    echo "    [0] none (do not resume from a tarball, start from scratch)"
     for i in "${!available_tarballs[@]}"; do
         echo "    [$((i+1))] $(basename ${available_tarballs[$i]})   ($(date -r ${available_tarballs[$i]} '+%Y-%m-%d %H:%M'), $(du -h ${available_tarballs[$i]} | cut -f1))"
     done
     echo "  note: tarball [n] was written after the n-th accelerator build"
     if [[ ${n_tar} -ne ${n_accel} ]]; then
-        echo "  WARNING: ${n_tar} tarball(s) vs ${n_accel} accelerator target(s), so this pairing is unreliable"
+        echo "  WARNING: ${n_tar} tarball(s) vs ${n_accel} accelerator target(s), so tarballs cannot be paired with accelerator targets and the default is not to resume from a tarball"
     fi
 
     can_prompt=0
@@ -377,7 +382,10 @@ if [[ -n "${EESSI_INTERACTIVE_BUILD}" ]]; then
 
     # index (1-based) of the tarball given in EESSI_INTERACTIVE_BUILD_RESUME_FROM in the list of tarballs (0 if not in there)
     given_tar_idx=0
-    if [[ -n "${EESSI_INTERACTIVE_BUILD_RESUME_FROM}" ]]; then
+    resume_none=0
+    if [[ "${EESSI_INTERACTIVE_BUILD_RESUME_FROM,,}" == "none" ]]; then
+        resume_none=1
+    elif [[ -n "${EESSI_INTERACTIVE_BUILD_RESUME_FROM}" ]]; then
         for i in "${!available_tarballs[@]}"; do
             if [[ "$(realpath -m ${available_tarballs[$i]})" == "$(realpath -m ${EESSI_INTERACTIVE_BUILD_RESUME_FROM})" ]]; then
                 given_tar_idx=$((i+1))
@@ -415,34 +423,50 @@ if [[ -n "${EESSI_INTERACTIVE_BUILD}" ]]; then
     fi
     selected_accel="${EESSI_ACCELERATOR_TARGET_OVERRIDES[$((accel_idx-1))]}"
 
-    # select tarball to resume from
-    if [[ -z "${EESSI_INTERACTIVE_BUILD_RESUME_FROM}" ]]; then
-        if [[ ${n_tar} -eq 0 ]]; then
-            fatal_error "no state of the bot's build step to resume from found in ${TARBALL_TMP_BUILD_STEP_DIR}; set EESSI_INTERACTIVE_BUILD_RESUME_FROM"
-        fi
-        tar_idx=${n_tar}
+    # select tarball to resume from (or none)
+    # The default is the tarball that belongs to the selected accelerator target, which we can only tell if there are as many
+    # tarballs as accelerator targets. If not, there is no sensible default tarball, so the default is not to resume (0).
+    if [[ ${resume_none} -eq 0 && -z "${EESSI_INTERACTIVE_BUILD_RESUME_FROM}" ]]; then
         if [[ ${n_tar} -eq ${n_accel} ]]; then
             tar_idx=${accel_idx}
+        else
+            tar_idx=0
         fi
-        if [[ ${n_tar} -gt 1 ]]; then
-            if [[ ${can_prompt} -eq 1 ]]; then
-                interactive_choice "tarball to resume from" ${n_tar} ${tar_idx}
-                tar_idx=${INTERACTIVE_CHOICE}
-            else
-                msg="bot/build.sh: WARNING: no interactive terminal, so could not ask which tarball to resume from."
-                msg="${msg} Assuming '$(basename ${available_tarballs[$((tar_idx-1))]})'. To choose explicitly, set EESSI_INTERACTIVE_BUILD_RESUME_FROM."
-                echo_yellow "${msg}"
-            fi
+        if [[ ${n_tar} -eq 0 ]]; then
+            echo_yellow "bot/build.sh: WARNING: no state of the bot's build step found in ${TARBALL_TMP_BUILD_STEP_DIR}, so not resuming from a tarball."
+        elif [[ ${can_prompt} -eq 1 ]]; then
+            interactive_choice "tarball to resume from (0 = none)" ${n_tar} ${tar_idx} 0
+            tar_idx=${INTERACTIVE_CHOICE}
+        elif [[ ${tar_idx} -eq 0 ]]; then
+            msg="bot/build.sh: WARNING: no interactive terminal, so could not ask which tarball to resume from, and the ${n_tar} tarball(s)"
+            msg="${msg} cannot be paired with the ${n_accel} accelerator target(s). Assuming not to resume from a tarball."
+            msg="${msg} To choose explicitly, set EESSI_INTERACTIVE_BUILD_RESUME_FROM (to a tarball, or to 'none' to start from scratch)."
+            echo_yellow "${msg}"
+        elif [[ ${n_tar} -gt 1 ]]; then
+            msg="bot/build.sh: WARNING: no interactive terminal, so could not ask which tarball to resume from."
+            msg="${msg} Assuming '$(basename ${available_tarballs[$((tar_idx-1))]})', the one that belongs to accelerator target '${selected_accel}'."
+            msg="${msg} To choose explicitly, set EESSI_INTERACTIVE_BUILD_RESUME_FROM (to a tarball, or to 'none' to start from scratch)."
+            echo_yellow "${msg}"
         fi
-        EESSI_INTERACTIVE_BUILD_RESUME_FROM="${available_tarballs[$((tar_idx-1))]}"
+        if [[ ${tar_idx} -eq 0 ]]; then
+            resume_none=1
+        else
+            EESSI_INTERACTIVE_BUILD_RESUME_FROM="${available_tarballs[$((tar_idx-1))]}"
+        fi
     fi
-    if [[ ! -e "${EESSI_INTERACTIVE_BUILD_RESUME_FROM}" ]]; then
+    if [[ ${resume_none} -eq 1 ]]; then
+        EESSI_INTERACTIVE_BUILD_RESUME_FROM=""
+    elif [[ ! -e "${EESSI_INTERACTIVE_BUILD_RESUME_FROM}" ]]; then
         fatal_error "state to resume from does not exist: ${EESSI_INTERACTIVE_BUILD_RESUME_FROM}"
     fi
 
-    echo "bot/build.sh: EESSI_INTERACTIVE_BUILD='${EESSI_INTERACTIVE_BUILD}', accelerator '${selected_accel}', resuming from '${EESSI_INTERACTIVE_BUILD_RESUME_FROM}'"
+    if [[ ${resume_none} -eq 1 ]]; then
+        echo "bot/build.sh: EESSI_INTERACTIVE_BUILD='${EESSI_INTERACTIVE_BUILD}', accelerator '${selected_accel}', not resuming from a tarball"
+    else
+        echo "bot/build.sh: EESSI_INTERACTIVE_BUILD='${EESSI_INTERACTIVE_BUILD}', accelerator '${selected_accel}', resuming from '${EESSI_INTERACTIVE_BUILD_RESUME_FROM}'"
+        BUILD_STEP_ARGS+=("--resume" "${EESSI_INTERACTIVE_BUILD_RESUME_FROM}")
+    fi
     EESSI_ACCELERATOR_TARGET_OVERRIDES=("${selected_accel}")
-    BUILD_STEP_ARGS+=("--resume" "${EESSI_INTERACTIVE_BUILD_RESUME_FROM}")
 fi
 
 for ACCEL_OVERRIDE in "${EESSI_ACCELERATOR_TARGET_OVERRIDES[@]}"; do
