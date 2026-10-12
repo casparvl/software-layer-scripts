@@ -18,12 +18,15 @@
 #    file 'job.cfg' has been deposited
 #  - the directory may contain any additional files referenced in job.cfg
 
-# To debug a bot build interactively, re-run this script from the bot's job directory (the one containing
-# cfg/job.cfg), where the bot's wrapper has already cloned software-layer-scripts, from an interactive
-# allocation (a terminal is needed), with:
-#   EESSI_INTERACTIVE_BUILD=<mode> ./software-layer-scripts/bot/build.sh [args the bot passed]
-# Call it directly (not via the wrapper bot/build.sh of the software-layer checkout, which would try to
-# clone software-layer-scripts again and fail). Supported modes:
+# Debugging interactive builds
+# This script respects the environment variable EESSI_INTERACTIVE_BUILD=<mode> which may be set if one wants to debug interactively
+# To debug interactively, run:
+# EESSI_INTERACTIVE_BUILD=<mode> <path-to-bot-build-jobscript>
+# where the path-to-bot-build-jobscript is the job script referred to as build_job_script by the app.cfg of the build bot.
+# That is typically eessi-bot-software-layer/scripts/bot-build.slurm, which then calls bot/build.sh (i.e. this script) with
+# EESSI_INTERACTIVE_BUILD=<mode> set. This way, environment setup that is part of the bot-build.slurm script (including e.g.
+# sourcing of the site_config_script as pointed to in the bot's app.cfg) is included. Then, this script sets up more of the
+# build environment, before eventually running the build, dropping you in an interactive debugging shell. Supported modes:
 #   shell  - start a plain shell in the build container instead of running the build
 #   before - run the build, but start a shell (inside the compat layer, EasyBuild loaded) right before
 #            EasyBuild is called
