@@ -56,9 +56,8 @@ select_interactive_state() {
 
     # select the accelerator target
     if [[ -n "${EESSI_INTERACTIVE_BUILD_ACCELERATOR}" ]]; then
-        # accept the target with or without the 'accel/' prefix
+        # (same full name as EESSI_ACCELERATOR_TARGET_OVERRIDE, e.g. accel/nvidia/cc80)
         selected_accel_target="${EESSI_INTERACTIVE_BUILD_ACCELERATOR}"
-        [[ "${selected_accel_target}" == accel/* ]] || selected_accel_target="accel/${selected_accel_target}"
         local found=0 accel_target
         for accel_target in "${accel_targets[@]}"; do
             [[ "${accel_target}" == "${selected_accel_target}" ]] && found=1

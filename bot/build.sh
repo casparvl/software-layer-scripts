@@ -33,7 +33,7 @@
 #   onfail - run the build, and start a shell when EasyBuild fails (or the build script exits non-zero)
 # The state of the bot's build step (a tarball in previous_tmp/build_step) is resumed, and one accelerator target is
 # handled. Select them with EESSI_INTERACTIVE_BUILD_RESUME_FROM (a tmp directory or tarball, or 'none' to not resume from
-# anything and start from scratch) and EESSI_INTERACTIVE_BUILD_ACCELERATOR (e.g. nvidia/cc80). If one of them is set, it
+# anything and start from scratch) and EESSI_INTERACTIVE_BUILD_ACCELERATOR (e.g. accel/nvidia/cc80). If one of them is set, it
 # is used as given. If it is not set, you are asked to choose from the available accelerator targets / tarballs (the n-th
 # tarball is normally the one written after the n-th accelerator build), which needs stdin to be a terminal. Nothing is
 # assumed: without a terminal the script stops with an error asking you to set the variable(s). The only choices that
