@@ -383,7 +383,7 @@ if [[ -n "${EESSI_INTERACTIVE_BUILD}" ]]; then
     for i in "${!available_tarballs[@]}"; do
         echo "    [$((i+1))] $(basename ${available_tarballs[$i]})   ($(date -r ${available_tarballs[$i]} '+%Y-%m-%d %H:%M'), $(du -h ${available_tarballs[$i]} | cut -f1))"
     done
-    echo "  note: tarball [n] was written after the n-th accelerator build"
+    echo "  note: normally, tarball [n] is written after the n-th accelerator build, since each build should produce one tarball"
     if [[ ${n_tar} -ne ${n_accel} ]]; then
         echo "  WARNING: ${n_tar} tarball(s) vs ${n_accel} accelerator target(s), so tarballs cannot be paired with accelerator targets and the default is not to resume from a tarball"
     fi
@@ -391,6 +391,7 @@ if [[ -n "${EESSI_INTERACTIVE_BUILD}" ]]; then
     # we can ask if stdin is a terminal, or if answers are piped/redirected in (a here-string, pipe or file); not if stdin is
     # /dev/null or closed (e.g. in a batch job)
     can_prompt=0
+    # Allow for the user to input answers via stdin, or preselect answers using bot/build.sh <<< "2" or bot/build.sh < answers.txt type of redirects / pipes
     if [[ -t 0 || -p /dev/stdin || -f /dev/stdin ]]; then
         can_prompt=1
     fi
@@ -398,8 +399,10 @@ if [[ -n "${EESSI_INTERACTIVE_BUILD}" ]]; then
     # index (1-based) of the tarball given in EESSI_INTERACTIVE_BUILD_RESUME_FROM in the list of tarballs (0 if not in there)
     given_tar_idx=0
     resume_none=0
+    # do case insensative match through lower-case conversion in bash expansion
     if [[ "${EESSI_INTERACTIVE_BUILD_RESUME_FROM,,}" == "none" ]]; then
         resume_none=1
+    # If EESSI_INTERACTIVE_BUILD_RESUME_FROM is set, find the matching item in the available_tarballs list and set that as index `given_tar_idx`
     elif [[ -n "${EESSI_INTERACTIVE_BUILD_RESUME_FROM}" ]]; then
         for i in "${!available_tarballs[@]}"; do
             if [[ "$(realpath -m ${available_tarballs[$i]})" == "$(realpath -m ${EESSI_INTERACTIVE_BUILD_RESUME_FROM})" ]]; then
@@ -409,6 +412,7 @@ if [[ -n "${EESSI_INTERACTIVE_BUILD}" ]]; then
     fi
 
     # select accelerator target
+    # If EESSI_INTERACTIVE_BUILD_ACCELERATOR is set, find the matching item in the EESSI_ACCELERATOR_TARGET_OVERRIDES list and set the matching index as `accel_idx`.
     if [[ -n "${EESSI_INTERACTIVE_BUILD_ACCELERATOR}" ]]; then
         accel_idx=0
         for i in "${!EESSI_ACCELERATOR_TARGET_OVERRIDES[@]}"; do
@@ -421,11 +425,15 @@ if [[ -n "${EESSI_INTERACTIVE_BUILD}" ]]; then
             fatal_error "EESSI_INTERACTIVE_BUILD_ACCELERATOR='${EESSI_INTERACTIVE_BUILD_ACCELERATOR}' not found in accelerator targets of ${JOB_CFG_FILE}: ${EESSI_ACCELERATOR_TARGET_OVERRIDES[*]}"
         fi
     else
+        # default to last accelerator
         accel_idx=${n_accel}
+        # if the number of tarballs and accelerators is the same, default to the same index as for the tarballs instead
+        # Since 1 tarball is produced per accelerator build, the n-th tarball should match the n-th accelerator target
         if [[ ${given_tar_idx} -gt 0 && ${n_tar} -eq ${n_accel} ]]; then
             accel_idx=${given_tar_idx}
         fi
         if [[ ${n_accel} -gt 1 ]]; then
+            # Now either prompt the user (with the default set above) if possible, otherwise, just use the default directly
             if [[ ${can_prompt} -eq 1 ]]; then
                 interactive_choice "accelerator target" ${n_accel} ${accel_idx}
                 accel_idx=${INTERACTIVE_CHOICE}
@@ -453,13 +461,13 @@ if [[ -n "${EESSI_INTERACTIVE_BUILD}" ]]; then
             interactive_choice "tarball to resume from (0 = none)" ${n_tar} ${tar_idx} 0
             tar_idx=${INTERACTIVE_CHOICE}
         elif [[ ${tar_idx} -eq 0 ]]; then
-            msg="bot/build.sh: WARNING: no interactive terminal or piped input, so could not ask which tarball to resume from, and the ${n_tar} tarball(s)"
-            msg="${msg} cannot be paired with the ${n_accel} accelerator target(s). Assuming not to resume from a tarball."
+            msg="bot/build.sh: WARNING: cannot get user input on which tarball to resume from (no interactive terminal or piped input). Also, numbef of tarball(s) (${n_tar})"
+            msg="${msg} does not match the number of accelerators (${n_accel}) so we cannot pick a tarball automatically. Thus, we won't resume from a tarball."
             msg="${msg} To choose explicitly, set EESSI_INTERACTIVE_BUILD_RESUME_FROM (to a tarball, or to 'none' to start from scratch)."
             echo_yellow "${msg}"
         elif [[ ${n_tar} -gt 1 ]]; then
-            msg="bot/build.sh: WARNING: no interactive terminal or piped input, so could not ask which tarball to resume from."
-            msg="${msg} Assuming '$(basename ${available_tarballs[$((tar_idx-1))]})', the one that belongs to accelerator target '${selected_accel}'."
+            msg="bot/build.sh: WARNING: cannot get user input on which tarball to resume from (no interactive terminal or piped input)."
+            msg="${msg} Assuming that tarball '$(basename ${available_tarballs[$((tar_idx-1))]})' belongs to accelerator target '${selected_accel}' and resuming from there."
             msg="${msg} To choose explicitly, set EESSI_INTERACTIVE_BUILD_RESUME_FROM (to a tarball, or to 'none' to start from scratch)."
             echo_yellow "${msg}"
         fi
