@@ -34,13 +34,12 @@
 # The state of the bot's build step (a tarball in previous_tmp/build_step) is resumed, and one accelerator target is
 # handled. Select them with EESSI_INTERACTIVE_BUILD_RESUME_FROM (a tmp directory or tarball, or 'none' to not resume from
 # anything and start from scratch) and EESSI_INTERACTIVE_BUILD_ACCELERATOR (e.g. nvidia/cc80). If both are set, they are
-# used as given. If one or both are
-# unset and stdin is a terminal (or answers are piped in, e.g. printf '2\n0\n' | ...), the available tarballs and
-# accelerator targets are listed and you are asked for the missing one(s), one answer per line. Without that (e.g. in a
-# batch job), the missing one(s) are inferred and a warning is printed. If there are as many
-# tarballs as accelerator targets, the accelerator target / tarball that belongs to the other one is inferred (the n-th
-# tarball was written after the n-th accelerator build). Otherwise they cannot be paired: the default accelerator target is
-# the last one, and the default is not to resume from a tarball. Nothing is saved, no tarball is created.
+# used as given. If one or both are unset and stdin is a terminal, the available tarballs and accelerator targets are
+# listed and you are asked for the missing one(s). Without a terminal (e.g. in a batch job), the missing one(s) are
+# inferred and a warning is printed. If there are as many tarballs as accelerator targets, the accelerator target /
+# tarball that belongs to the other one is inferred (the n-th tarball was written after the n-th accelerator build).
+# Otherwise they cannot be paired: the default accelerator target is the last one, and the default is not to resume from
+# a tarball. Nothing is saved, no tarball is created.
 
 # stop as soon as something fails
 set -e

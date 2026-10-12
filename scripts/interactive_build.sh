@@ -3,35 +3,26 @@
 #
 # Requires fatal_error and echo_yellow (scripts/utils.sh).
 
-# We can ask the user something if stdin is a terminal, or if answers are piped/redirected in (a here-string, pipe or
-# file); not if stdin is /dev/null or closed (e.g. in a batch job)
-can_ask() {
-    [[ -t 0 || -p /dev/stdin || -f /dev/stdin ]]
-}
-
 # Ask the user to choose a number between $4 (default 1) and $2 for $1, default $3, result in INTERACTIVE_CHOICE
+# Note that all output of the dialog goes to stderr, like the prompt of 'read -p' does (bash's own convention for prompts)
 interactive_choice() {
     local what="$1" n="$2" default="$3" min="${4:-1}" answer
     # loop until we get a valid answer
     while true; do
-        # (we print the prompt ourselves: 'read -p' only shows it if stdin is a terminal, not if answers are piped in)
-        printf "bot/build.sh: select %s [%s-%s, default %s]: " "${what}" "${min}" "${n}" "${default}" >&2
         # Use the default & exit the loop if read returns non-zero, e.g. at EOF because user pressed Ctrl+D / terminal
         # disappears (avoid infinite loop)
-        if ! read -r answer; then
+        if ! read -r -p "bot/build.sh: select ${what} [${min}-${n}, default ${default}]: " answer; then
             echo >&2
             INTERACTIVE_CHOICE=${default}
             return
         fi
-        # if the answer was piped in, it isn't echoed by a terminal, so show it in the output
-        [[ -t 0 ]] || echo "${answer}" >&2
         answer=${answer:-${default}}
         # Check answer is valid and return
         if [[ "${answer}" =~ ^[0-9]+$ ]] && (( answer >= min && answer <= n )); then
             INTERACTIVE_CHOICE=${answer}
             return
         fi
-        echo "bot/build.sh: invalid choice '${answer}'"
+        echo "bot/build.sh: invalid choice '${answer}'" >&2
     done
 }
 
@@ -55,21 +46,22 @@ index_of() {
 # Choose one entry of the array named $5, and return its number in CHOSEN: N for entry N of the array (counting from 1),
 # and 0 for 'none' (only allowed if $4, the lowest allowed number, is 0).
 #   $1 what is being chosen, $2 environment variable with which the user can set it, $3 default number, $4 lowest number
-# If there is only one option, we don't need to choose. Otherwise we ask the user, if we can, or use the default and warn
+# If there is only one option, we don't need to choose. Otherwise we ask the user, if stdin is a terminal, or else use the
+# default and warn
 choose_option() {
     local what="$1" var="$2" default="$3" min="$4"
     local -n options="$5"
     local max=${#options[@]}
     if [[ ${max} -eq ${min} ]]; then
         CHOSEN=${max}
-    elif can_ask; then
+    elif [[ -t 0 ]]; then
         interactive_choice "${what}" ${max} ${default} ${min}
         CHOSEN=${INTERACTIVE_CHOICE}
     else
         CHOSEN=${default}
         local assumed="none"
         [[ ${CHOSEN} -gt 0 ]] && assumed="'${options[$((CHOSEN-1))]}'"
-        echo_yellow "bot/build.sh: WARNING: no interactive terminal or piped input, so could not ask which ${what}. Assuming ${assumed}. To choose explicitly, set ${var}."
+        echo_yellow "bot/build.sh: WARNING: stdin is not a terminal, so could not ask which ${what}. Assuming ${assumed}. To choose explicitly, set ${var}."
     fi
 }
 
