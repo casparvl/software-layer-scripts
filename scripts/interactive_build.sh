@@ -56,7 +56,8 @@ select_interactive_state() {
 
     # select the accelerator target
     if [[ -n "${EESSI_INTERACTIVE_BUILD_ACCELERATOR}" ]]; then
-        # (same full name as EESSI_ACCELERATOR_TARGET_OVERRIDE, e.g. accel/nvidia/cc80)
+        # Format for EESSI_INTERACTIVE_BUILD_ACCELERATOR is similar to EESSI_ACCELERATOR_TARGET_OVERRIDE,
+        # e.g. accel/nvidia/cc80
         selected_accel_target="${EESSI_INTERACTIVE_BUILD_ACCELERATOR}"
         local found=0 accel_target
         for accel_target in "${accel_targets[@]}"; do
@@ -66,7 +67,8 @@ select_interactive_state() {
             fatal_error "EESSI_INTERACTIVE_BUILD_ACCELERATOR='${EESSI_INTERACTIVE_BUILD_ACCELERATOR}' not found in accelerator targets of ${JOB_CFG_FILE}: ${accel_targets[*]}"
         fi
     else
-        # (no need to list or ask if there is only one)
+        # List accelerators from the job.cfg file
+        # (skip listing if there is only one - choose_option will select it by default)
         if [[ ${#accel_targets[@]} -gt 1 ]]; then
             echo "bot/build.sh: accelerator targets of this build (in the order the bot built them):"
             for i in "${!accel_targets[@]}"; do
@@ -92,7 +94,7 @@ select_interactive_state() {
         selected_tarball="none"
         [[ ${CHOSEN_NUMBER} -gt 0 ]] && selected_tarball="${tarball_paths[$((CHOSEN_NUMBER-1))]}"
     fi
-    # accept 'none' in any capitalisation
+    # accept 'none' in any capitalisation (and normalize to lower case for easier subsequent checks)
     [[ "${selected_tarball,,}" == "none" ]] && selected_tarball="none"
     if [[ "${selected_tarball}" != "none" && ! -e "${selected_tarball}" ]]; then
         fatal_error "state to resume from does not exist: ${selected_tarball}"
