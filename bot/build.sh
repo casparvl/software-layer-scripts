@@ -335,13 +335,13 @@ RESUME_DIR=""
 if [[ -n "${EESSI_INTERACTIVE_BUILD}" ]]; then
     source $software_layer_dir/scripts/interactive_build.sh
     select_interactive_state
-    if [[ "${selected_tar}" == "none" ]]; then
-        echo "bot/build.sh: EESSI_INTERACTIVE_BUILD='${EESSI_INTERACTIVE_BUILD}', accelerator '${selected_accel}', not resuming from a tarball"
+    if [[ "${selected_tarball}" == "none" ]]; then
+        echo "bot/build.sh: EESSI_INTERACTIVE_BUILD='${EESSI_INTERACTIVE_BUILD}', accelerator '${selected_accel_target}', not resuming from a tarball"
     else
-        echo "bot/build.sh: EESSI_INTERACTIVE_BUILD='${EESSI_INTERACTIVE_BUILD}', accelerator '${selected_accel}', resuming from '${selected_tar}'"
-        BUILD_STEP_ARGS+=("--resume" "${selected_tar}")
+        echo "bot/build.sh: EESSI_INTERACTIVE_BUILD='${EESSI_INTERACTIVE_BUILD}', accelerator '${selected_accel_target}', resuming from '${selected_tarball}'"
+        BUILD_STEP_ARGS+=("--resume" "${selected_tarball}")
     fi
-    EESSI_ACCELERATOR_TARGET_OVERRIDES=("${selected_accel}")
+    EESSI_ACCELERATOR_TARGET_OVERRIDES=("${selected_accel_target}")
 fi
 
 for ACCEL_OVERRIDE in "${EESSI_ACCELERATOR_TARGET_OVERRIDES[@]}"; do
