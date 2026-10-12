@@ -35,8 +35,9 @@
 # handled. Select them with EESSI_INTERACTIVE_BUILD_RESUME_FROM (a tmp directory or tarball, or 'none' to not resume from
 # anything and start from scratch) and EESSI_INTERACTIVE_BUILD_ACCELERATOR (e.g. nvidia/cc80). If both are set, they are
 # used as given. If one or both are
-# unset and there is a terminal, the available tarballs and accelerator targets are listed and you are asked for the
-# missing one(s). Without a terminal, the missing one(s) are inferred and a warning is printed. If there are as many
+# unset and stdin is a terminal (or answers are piped in, e.g. printf '2\n0\n' | ...), the available tarballs and
+# accelerator targets are listed and you are asked for the missing one(s), one answer per line. Without that (e.g. in a
+# batch job), the missing one(s) are inferred and a warning is printed. If there are as many
 # tarballs as accelerator targets, the accelerator target / tarball that belongs to the other one is inferred (the n-th
 # tarball was written after the n-th accelerator build). Otherwise they cannot be paired: the default accelerator target is
 # the last one, and the default is not to resume from a tarball. Nothing is saved, no tarball is created.
@@ -333,8 +334,10 @@ RESUME_DIR=""
 # interactive debugging only handles a single accelerator target, and resumes from a single tarball of the bot's build step.
 # - If both EESSI_INTERACTIVE_BUILD_ACCELERATOR and EESSI_INTERACTIVE_BUILD_RESUME_FROM are set, we use them as given
 #   (EESSI_INTERACTIVE_BUILD_RESUME_FROM=none means: do not resume from a tarball, i.e. don't pass --resume).
-# - If one or both are unset and we have a terminal, we list the options and ask for the missing one(s).
-# - If one or both are unset and there is no terminal, we cannot ask: we infer the missing one(s) and print a warning.
+# - If one or both are unset and stdin is a terminal (or answers are piped in), we list the options and ask for the missing
+#   one(s), reading answers from stdin (one per line).
+# - If one or both are unset and stdin is neither (e.g. /dev/null in a batch job), we cannot ask: we infer the missing
+#   one(s) and print a warning.
 # The suggested (default) accelerator target is the last one. The default tarball is the one that belongs to the selected
 # accelerator target (the n-th tarball was written after the n-th accelerator build), which we can only tell if there are
 # as many tarballs as accelerator targets; otherwise the default is not to resume from a tarball. Likewise, if a tarball
@@ -345,10 +348,15 @@ interactive_choice() {
     # loop until we get a valid answer
     while true; do
         # Make sure to use defautl & exist loop if read returns non-zero, e.g. at EOF because user pressed Ctrl+D / terminal disappears (avoid infinite loop)
-        if ! read -r -p "bot/build.sh: select ${what} [${min}-${n}, default ${default}]: " answer < /dev/tty; then
+        # (we print the prompt ourselves: 'read -p' only shows it if stdin is a terminal, not if answers are piped in)
+        printf "bot/build.sh: select %s [%s-%s, default %s]: " "${what}" "${min}" "${n}" "${default}" >&2
+        if ! read -r answer; then
+            echo >&2
             INTERACTIVE_CHOICE=${default}
             return
         fi
+        # if the answer was piped in, it isn't echoed by a terminal, so show it in the output
+        [[ -t 0 ]] || echo "${answer}" >&2
         answer=${answer:-${default}}
         # Check answer is valid and return
         if [[ "${answer}" =~ ^[0-9]+$ ]] && (( answer >= min && answer <= n )); then
@@ -380,8 +388,12 @@ if [[ -n "${EESSI_INTERACTIVE_BUILD}" ]]; then
         echo "  WARNING: ${n_tar} tarball(s) vs ${n_accel} accelerator target(s), so tarballs cannot be paired with accelerator targets and the default is not to resume from a tarball"
     fi
 
+    # we can ask if stdin is a terminal, or if answers are piped/redirected in (a here-string, pipe or file); not if stdin is
+    # /dev/null or closed (e.g. in a batch job)
     can_prompt=0
-    { : < /dev/tty; } 2>/dev/null && can_prompt=1
+    if [[ -t 0 || -p /dev/stdin || -f /dev/stdin ]]; then
+        can_prompt=1
+    fi
 
     # index (1-based) of the tarball given in EESSI_INTERACTIVE_BUILD_RESUME_FROM in the list of tarballs (0 if not in there)
     given_tar_idx=0
@@ -418,7 +430,7 @@ if [[ -n "${EESSI_INTERACTIVE_BUILD}" ]]; then
                 interactive_choice "accelerator target" ${n_accel} ${accel_idx}
                 accel_idx=${INTERACTIVE_CHOICE}
             else
-                msg="bot/build.sh: WARNING: no interactive terminal, so could not ask which accelerator target to use."
+                msg="bot/build.sh: WARNING: no interactive terminal or piped input, so could not ask which accelerator target to use."
                 msg="${msg} Assuming '${EESSI_ACCELERATOR_TARGET_OVERRIDES[$((accel_idx-1))]}'. To choose explicitly, set EESSI_INTERACTIVE_BUILD_ACCELERATOR."
                 echo_yellow "${msg}"
             fi
@@ -441,12 +453,12 @@ if [[ -n "${EESSI_INTERACTIVE_BUILD}" ]]; then
             interactive_choice "tarball to resume from (0 = none)" ${n_tar} ${tar_idx} 0
             tar_idx=${INTERACTIVE_CHOICE}
         elif [[ ${tar_idx} -eq 0 ]]; then
-            msg="bot/build.sh: WARNING: no interactive terminal, so could not ask which tarball to resume from, and the ${n_tar} tarball(s)"
+            msg="bot/build.sh: WARNING: no interactive terminal or piped input, so could not ask which tarball to resume from, and the ${n_tar} tarball(s)"
             msg="${msg} cannot be paired with the ${n_accel} accelerator target(s). Assuming not to resume from a tarball."
             msg="${msg} To choose explicitly, set EESSI_INTERACTIVE_BUILD_RESUME_FROM (to a tarball, or to 'none' to start from scratch)."
             echo_yellow "${msg}"
         elif [[ ${n_tar} -gt 1 ]]; then
-            msg="bot/build.sh: WARNING: no interactive terminal, so could not ask which tarball to resume from."
+            msg="bot/build.sh: WARNING: no interactive terminal or piped input, so could not ask which tarball to resume from."
             msg="${msg} Assuming '$(basename ${available_tarballs[$((tar_idx-1))]})', the one that belongs to accelerator target '${selected_accel}'."
             msg="${msg} To choose explicitly, set EESSI_INTERACTIVE_BUILD_RESUME_FROM (to a tarball, or to 'none' to start from scratch)."
             echo_yellow "${msg}"
