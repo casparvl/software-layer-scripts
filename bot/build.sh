@@ -31,10 +31,13 @@
 #   before - run the build, but start a shell (inside the compat layer, EasyBuild loaded) right before
 #            EasyBuild is called
 #   onfail - run the build, and start a shell when EasyBuild fails (or the build script exits non-zero)
-# The state of the bot's build step is resumed from EESSI_INTERACTIVE_BUILD_RESUME_FROM (a tmp directory or tarball),
-# by default the newest tarball in previous_tmp/build_step. Nothing is saved, no tarball is created.
-# Only one accelerator target is handled: by default the last one in job.cfg (matching the newest tarball),
-# EESSI_INTERACTIVE_BUILD_ACCELERATOR (e.g. nvidia/cc80) selects another one, in which case also set EESSI_INTERACTIVE_BUILD_RESUME_FROM.
+# The state of the bot's build step (a tarball in previous_tmp/build_step) is resumed, and one accelerator target is
+# handled. Select them with EESSI_INTERACTIVE_BUILD_RESUME_FROM (a tmp directory or tarball) and
+# EESSI_INTERACTIVE_BUILD_ACCELERATOR (e.g. nvidia/cc80). If both are set, they are used as given. If one or both are
+# unset and there is a terminal, the available tarballs and accelerator targets are listed and you are asked for the
+# missing one(s). Without a terminal, the missing one(s) are inferred (default: the last accelerator target and the newest
+# tarball, or the accelerator target / tarball that belongs to the other one, if there are as many tarballs as
+# accelerator targets), and a warning is printed. Nothing is saved, no tarball is created.
 
 # stop as soon as something fails
 set -e
@@ -284,19 +287,12 @@ if [[ -z "${EESSI_INTERACTIVE_BUILD}" ]]; then
 fi
 BUILD_STEP_ARGS+=("--storage" "${STORAGE}")
 
-# interactive debugging: resume the state of the bot's build step (so that already installed software is available)
-# Default will be to resume from the latest build-step tarball, but this can be overriden by pointing EESSI_INTERACTIVE_BUILD_RESUME_FROM
-# to another tarball before running bot/build.sh
+# interactive debugging: check the requested mode. The state of the bot's build step to resume from (tarball) and the
+# accelerator target are selected further below, once the list of accelerator targets is known
 if [[ -n "${EESSI_INTERACTIVE_BUILD}" ]]; then
     if [[ ! "${EESSI_INTERACTIVE_BUILD}" =~ ^(shell|before|onfail)$ ]]; then
         fatal_error "EESSI_INTERACTIVE_BUILD must be one of: shell, before, onfail (got '${EESSI_INTERACTIVE_BUILD}')"
     fi
-    EESSI_INTERACTIVE_BUILD_RESUME_FROM=${EESSI_INTERACTIVE_BUILD_RESUME_FROM:-$(ls -t ${TARBALL_TMP_BUILD_STEP_DIR}/tmp_storage-* 2>/dev/null | head -n 1)}
-    if [[ -z "${EESSI_INTERACTIVE_BUILD_RESUME_FROM}" || ! -e "${EESSI_INTERACTIVE_BUILD_RESUME_FROM}" ]]; then
-        fatal_error "no state of the bot's build step to resume from found in ${TARBALL_TMP_BUILD_STEP_DIR}; set EESSI_INTERACTIVE_BUILD_RESUME_FROM"
-    fi
-    echo "bot/build.sh: EESSI_INTERACTIVE_BUILD='${EESSI_INTERACTIVE_BUILD}', resuming from '${EESSI_INTERACTIVE_BUILD_RESUME_FROM}'"
-    BUILD_STEP_ARGS+=("--resume" "${EESSI_INTERACTIVE_BUILD_RESUME_FROM}")
 fi
 
 # Retain location for host injections so we don't reinstall CUDA
@@ -332,24 +328,36 @@ else
 fi
 RESUME_DIR=""
 
-# interactive debugging only handles a single accelerator target: by default the last one, as the default (newest)
-# tarball is from its build; EESSI_INTERACTIVE_BUILD_ACCELERATOR (e.g. nvidia/cc80 or accel/nvidia/cc80) selects another one
-if [[ -n "${EESSI_INTERACTIVE_BUILD}" ]]; then
-    selected_accel="${EESSI_ACCELERATOR_TARGET_OVERRIDES[-1]}"
-    if [[ -n "${EESSI_INTERACTIVE_BUILD_ACCELERATOR}" ]]; then
-        selected_accel=""
-        for candidate in "${EESSI_ACCELERATOR_TARGET_OVERRIDES[@]}"; do
-            if [[ "${candidate}" == "${EESSI_INTERACTIVE_BUILD_ACCELERATOR}" || "${candidate}" == "accel/${EESSI_INTERACTIVE_BUILD_ACCELERATOR}" ]]; then
-                selected_accel="${candidate}"
-            fi
-        done
-        if [[ -z "${selected_accel}" ]]; then
-            fatal_error "EESSI_INTERACTIVE_BUILD_ACCELERATOR='${EESSI_INTERACTIVE_BUILD_ACCELERATOR}' not found in accelerator targets of ${JOB_CFG_FILE}: ${EESSI_ACCELERATOR_TARGET_OVERRIDES[*]}"
+# interactive debugging only handles a single accelerator target, and resumes from a single tarball of the bot's build step.
+# - If both EESSI_INTERACTIVE_BUILD_ACCELERATOR and EESSI_INTERACTIVE_BUILD_RESUME_FROM are set, we use them as given.
+# - If one or both are unset and we have a terminal, we list the options and ask for the missing one(s).
+# - If one or both are unset and there is no terminal, we cannot ask: we infer the missing one(s) and print a warning.
+# The suggested (default) accelerator target is the last one, and the default tarball the newest one. If the other one is
+# known and there are as many tarballs as accelerator targets, the default is the one that belongs to it instead (the
+# n-th tarball was written after the n-th accelerator build).
+# Ask the user to choose a number between 1 and $2 for $1, default $3, result in INTERACTIVE_CHOICE
+interactive_choice() {
+    local what="$1" n="$2" default="$3" answer
+    while true; do
+        if ! read -r -p "bot/build.sh: select ${what} [1-${n}, default ${default}]: " answer < /dev/tty; then
+            INTERACTIVE_CHOICE=${default}
+            return
         fi
-    fi
+        answer=${answer:-${default}}
+        if [[ "${answer}" =~ ^[0-9]+$ ]] && (( answer >= 1 && answer <= n )); then
+            INTERACTIVE_CHOICE=${answer}
+            return
+        fi
+        echo "bot/build.sh: invalid choice '${answer}'"
+    done
+}
+
+if [[ -n "${EESSI_INTERACTIVE_BUILD}" ]]; then
+    mapfile -t available_tarballs < <(ls -tr ${TARBALL_TMP_BUILD_STEP_DIR}/tmp_storage-* 2>/dev/null)
+    n_accel=${#EESSI_ACCELERATOR_TARGET_OVERRIDES[@]}
+    n_tar=${#available_tarballs[@]}
 
     # show what is available, so it is easy to check that the accelerator and tarball selection belong together
-    mapfile -t available_tarballs < <(ls -tr ${TARBALL_TMP_BUILD_STEP_DIR}/tmp_storage-* 2>/dev/null)
     echo "bot/build.sh: interactive debugging, available state of the bot's build step:"
     echo "  accelerator targets (in the order the bot built them):"
     for i in "${!EESSI_ACCELERATOR_TARGET_OVERRIDES[@]}"; do
@@ -359,13 +367,82 @@ if [[ -n "${EESSI_INTERACTIVE_BUILD}" ]]; then
     for i in "${!available_tarballs[@]}"; do
         echo "    [$((i+1))] $(basename ${available_tarballs[$i]})   ($(date -r ${available_tarballs[$i]} '+%Y-%m-%d %H:%M'), $(du -h ${available_tarballs[$i]} | cut -f1))"
     done
-    echo "  note: tarball [n] was written after the n-th accelerator build; to debug another target set"
-    echo "        EESSI_INTERACTIVE_BUILD_ACCELERATOR=<target> and EESSI_INTERACTIVE_BUILD_RESUME_FROM=<tarball>"
-    if [[ ${#available_tarballs[@]} -ne ${#EESSI_ACCELERATOR_TARGET_OVERRIDES[@]} ]]; then
-        echo "  WARNING: ${#available_tarballs[@]} tarball(s) vs ${#EESSI_ACCELERATOR_TARGET_OVERRIDES[@]} accelerator target(s), so the pairing above is unreliable"
+    echo "  note: tarball [n] was written after the n-th accelerator build"
+    if [[ ${n_tar} -ne ${n_accel} ]]; then
+        echo "  WARNING: ${n_tar} tarball(s) vs ${n_accel} accelerator target(s), so this pairing is unreliable"
     fi
-    echo "  selected: accelerator '${selected_accel}', resuming from '${EESSI_INTERACTIVE_BUILD_RESUME_FROM}'"
+
+    can_prompt=0
+    { : < /dev/tty; } 2>/dev/null && can_prompt=1
+
+    # index (1-based) of the tarball given in EESSI_INTERACTIVE_BUILD_RESUME_FROM in the list of tarballs (0 if not in there)
+    given_tar_idx=0
+    if [[ -n "${EESSI_INTERACTIVE_BUILD_RESUME_FROM}" ]]; then
+        for i in "${!available_tarballs[@]}"; do
+            if [[ "$(realpath -m ${available_tarballs[$i]})" == "$(realpath -m ${EESSI_INTERACTIVE_BUILD_RESUME_FROM})" ]]; then
+                given_tar_idx=$((i+1))
+            fi
+        done
+    fi
+
+    # select accelerator target
+    if [[ -n "${EESSI_INTERACTIVE_BUILD_ACCELERATOR}" ]]; then
+        accel_idx=0
+        for i in "${!EESSI_ACCELERATOR_TARGET_OVERRIDES[@]}"; do
+            candidate="${EESSI_ACCELERATOR_TARGET_OVERRIDES[$i]}"
+            if [[ "${candidate}" == "${EESSI_INTERACTIVE_BUILD_ACCELERATOR}" || "${candidate}" == "accel/${EESSI_INTERACTIVE_BUILD_ACCELERATOR}" ]]; then
+                accel_idx=$((i+1))
+            fi
+        done
+        if [[ ${accel_idx} -eq 0 ]]; then
+            fatal_error "EESSI_INTERACTIVE_BUILD_ACCELERATOR='${EESSI_INTERACTIVE_BUILD_ACCELERATOR}' not found in accelerator targets of ${JOB_CFG_FILE}: ${EESSI_ACCELERATOR_TARGET_OVERRIDES[*]}"
+        fi
+    else
+        accel_idx=${n_accel}
+        if [[ ${given_tar_idx} -gt 0 && ${n_tar} -eq ${n_accel} ]]; then
+            accel_idx=${given_tar_idx}
+        fi
+        if [[ ${n_accel} -gt 1 ]]; then
+            if [[ ${can_prompt} -eq 1 ]]; then
+                interactive_choice "accelerator target" ${n_accel} ${accel_idx}
+                accel_idx=${INTERACTIVE_CHOICE}
+            else
+                msg="bot/build.sh: WARNING: no interactive terminal, so could not ask which accelerator target to use."
+                msg="${msg} Assuming '${EESSI_ACCELERATOR_TARGET_OVERRIDES[$((accel_idx-1))]}'. To choose explicitly, set EESSI_INTERACTIVE_BUILD_ACCELERATOR."
+                echo_yellow "${msg}"
+            fi
+        fi
+    fi
+    selected_accel="${EESSI_ACCELERATOR_TARGET_OVERRIDES[$((accel_idx-1))]}"
+
+    # select tarball to resume from
+    if [[ -z "${EESSI_INTERACTIVE_BUILD_RESUME_FROM}" ]]; then
+        if [[ ${n_tar} -eq 0 ]]; then
+            fatal_error "no state of the bot's build step to resume from found in ${TARBALL_TMP_BUILD_STEP_DIR}; set EESSI_INTERACTIVE_BUILD_RESUME_FROM"
+        fi
+        tar_idx=${n_tar}
+        if [[ ${n_tar} -eq ${n_accel} ]]; then
+            tar_idx=${accel_idx}
+        fi
+        if [[ ${n_tar} -gt 1 ]]; then
+            if [[ ${can_prompt} -eq 1 ]]; then
+                interactive_choice "tarball to resume from" ${n_tar} ${tar_idx}
+                tar_idx=${INTERACTIVE_CHOICE}
+            else
+                msg="bot/build.sh: WARNING: no interactive terminal, so could not ask which tarball to resume from."
+                msg="${msg} Assuming '$(basename ${available_tarballs[$((tar_idx-1))]})'. To choose explicitly, set EESSI_INTERACTIVE_BUILD_RESUME_FROM."
+                echo_yellow "${msg}"
+            fi
+        fi
+        EESSI_INTERACTIVE_BUILD_RESUME_FROM="${available_tarballs[$((tar_idx-1))]}"
+    fi
+    if [[ ! -e "${EESSI_INTERACTIVE_BUILD_RESUME_FROM}" ]]; then
+        fatal_error "state to resume from does not exist: ${EESSI_INTERACTIVE_BUILD_RESUME_FROM}"
+    fi
+
+    echo "bot/build.sh: EESSI_INTERACTIVE_BUILD='${EESSI_INTERACTIVE_BUILD}', accelerator '${selected_accel}', resuming from '${EESSI_INTERACTIVE_BUILD_RESUME_FROM}'"
     EESSI_ACCELERATOR_TARGET_OVERRIDES=("${selected_accel}")
+    BUILD_STEP_ARGS+=("--resume" "${EESSI_INTERACTIVE_BUILD_RESUME_FROM}")
 fi
 
 for ACCEL_OVERRIDE in "${EESSI_ACCELERATOR_TARGET_OVERRIDES[@]}"; do
