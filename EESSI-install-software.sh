@@ -91,7 +91,7 @@ source $TOPDIR/scripts/utils.sh
 # rcfile, so that e.g. ${EB} and our helper functions are available too.
 debug_shell() {
     local reason="$1"
-    local rcfile term_rows term_cols
+    local rcfile
     rcfile=$(mktemp "${TMPDIR:-/tmp}/debug_shell_rc.XXXXXX")
     {
         # 'grep -v' filters out read-only variables (e.g. BASHOPTS, EUID), as trying to load those in a debug shell
@@ -105,19 +105,23 @@ debug_shell() {
         echo "set +e +u; trap - EXIT"
         echo "PS1='[EESSI debug] \\w \\$ '"
         echo "cd '${PWD}'"
-        # the pty of the debug shell doesn't have the size of our terminal, so pass it on
-        read -r term_rows term_cols < <(stty size < /dev/tty 2>/dev/null) && echo "stty rows ${term_rows} cols ${term_cols}"
     } > "${rcfile}" 2>/dev/null
     echo_yellow ">> Dropping into an interactive debug shell: ${reason}"
     echo_yellow ">> Working directory: ${PWD}; exit the shell (Ctrl-D) to continue/finish"
-    # Run the shell in a pty of its own (python3 is needed anyway for EasyBuild), not directly on our terminal. An
-    # interactive bash takes over the terminal (it makes its own process group the foreground group) and hands it back
-    # to our group when it exits. Inside the container our group is not visible (it was created outside the PID
-    # namespace), so that fails, and Ctrl+C would no longer reach the build after exiting the debug shell. (Starting it
-    # with 'bash +m' doesn't help: an interactive bash still takes over the terminal.)
-    python3 -c 'import pty, sys; pty.spawn(sys.argv[1:])' bash --rcfile "${rcfile}" -i < /dev/tty > /dev/tty 2>&1
+    # Run the shell in a pty of its own (using 'script'), not directly on our terminal. An interactive bash takes over
+    # the terminal (it makes its own process group the foreground group) and hands it back to our group when it exits.
+    # Inside the container our group is not visible (it was created outside the PID namespace), so that fails, and
+    # Ctrl+C would no longer reach the build after exiting the debug shell. (Starting it with 'bash +m' doesn't help: an
+    # interactive bash still takes over the terminal.) 'script' also passes on the window size, including resizes.
+    script -qc "bash --rcfile $(printf '%q' "${rcfile}") -i" /dev/null < /dev/tty > /dev/tty 2>&1
     rm -f "${rcfile}"
 }
+
+# The debug shell needs 'script', check this now rather than when we want the shell (possibly after a long build). This
+# is done before defining the trap below, so that failing here does not try to start a debug shell.
+if [[ -n "${EESSI_INTERACTIVE_BUILD}" ]] && ! command -v script > /dev/null; then
+    fatal_error "EESSI_INTERACTIVE_BUILD=${EESSI_INTERACTIVE_BUILD} needs the 'script' command to start a debug shell, but it was not found. It is part of util-linux, and is normally available in the EESSI compatibility layer."
+fi
 
 # If EESSI_INTERACTIVE_BUILD=onfail, then define a trap so that if an error is encounted that would cause the shell to exit
 # (e.g. fatal_error) we get dropped into the debug_shell as well. That will allow us to not only debug EasyBuild build 
