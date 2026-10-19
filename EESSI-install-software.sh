@@ -108,7 +108,10 @@ debug_shell() {
     } > "${rcfile}" 2>/dev/null
     echo_yellow ">> Dropping into an interactive debug shell: ${reason}"
     echo_yellow ">> Working directory: ${PWD}; exit the shell (Ctrl-D) to continue/finish"
-    bash --rcfile "${rcfile}" -i < /dev/tty > /dev/tty 2>&1
+    # '+m' (no job control): with job control, the shell makes its own process group the terminal's foreground group and
+    # hands the terminal back to our group when it exits. Inside the container our group is not visible (it was created
+    # outside the PID namespace), so that fails, and Ctrl+C no longer reaches the build after exiting the debug shell.
+    bash +m --rcfile "${rcfile}" -i < /dev/tty > /dev/tty 2>&1
     rm -f "${rcfile}"
 }
 
