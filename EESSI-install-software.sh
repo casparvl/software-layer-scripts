@@ -110,12 +110,6 @@ debug_shell() {
     echo_yellow ">> Working directory: ${PWD}; exit the shell (Ctrl-D) to continue/finish"
     bash --rcfile "${rcfile}" -i < /dev/tty > /dev/tty 2>&1
     rm -f "${rcfile}"
-    # The debug shell has job control, so it made its own process group the terminal's foreground group, and we don't
-    # get the terminal back reliably when it exits. Without this, Ctrl+C no longer reaches the build afterwards.
-    # (SIGTTOU is ignored, as changing the foreground group from a background group would otherwise stop us.)
-    python3 -c 'import os, signal
-signal.signal(signal.SIGTTOU, signal.SIG_IGN)
-os.tcsetpgrp(os.open("/dev/tty", os.O_RDWR), os.getpgrp())' 2>/dev/null || true
 }
 
 # If EESSI_INTERACTIVE_BUILD=onfail, then define a trap so that if an error is encounted that would cause the shell to exit
