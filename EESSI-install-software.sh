@@ -110,9 +110,12 @@ debug_shell() {
     echo_yellow ">> Working directory: ${PWD}; exit the shell (Ctrl-D) to continue/finish"
     # Run the shell in a pty of its own (using 'script'), not directly on our terminal. An interactive bash takes over
     # the terminal (it makes its own process group the foreground group) and hands it back to our group when it exits.
-    # Inside the container our group is not visible (it was created outside the PID namespace), so that fails, and
-    # Ctrl+C would no longer reach the build after exiting the debug shell. (Starting it with 'bash +m' doesn't help: an
-    # interactive bash still takes over the terminal.) 'script' also passes on the window size, including resizes.
+    # This resolves issues with Ctrl+C no longer working after the debug shell has been exited (which was the case 
+    # without 'script' / a pty).
+    # See https://github.com/EESSI/software-layer-scripts/pull/321#issuecomment-6267183643 and
+    # https://github.com/EESSI/software-layer-scripts/pull/321#issuecomment-6267991021 for details.
+    # If script is ever no longer available from the compatibility layer, the same can be achieved with python3, see
+    # https://github.com/EESSI/software-layer-scripts/pull/321/changes/8d617c7c44cbf51ccdb3c801d36c86c85bdfcbfc
     script -qc "bash --rcfile $(printf '%q' "${rcfile}") -i" /dev/null < /dev/tty > /dev/tty 2>&1
     rm -f "${rcfile}"
 }
