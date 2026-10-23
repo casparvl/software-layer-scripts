@@ -2283,7 +2283,7 @@ def post_postproc_cudnn(self, *args, **kwargs):
 
 def post_proc_julia(self, *args, **kwargs):
     """
-    Post-processing hook for Julia: add the `--cpu-target` option to the `julia` wrappere in order to ensure the
+    Post-processing hook for Julia: add the `--cpu-target` option to the `julia` wrappers in order to ensure the
     correct CPU target is used when running Julia, and to avoid issues with Julia's autodetection of the CPU target.
     """
     if self.name == 'Julia':
