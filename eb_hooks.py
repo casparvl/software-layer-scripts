@@ -2333,7 +2333,14 @@ def post_proc_julia(self, *args, **kwargs):
                 with open(wrapper_path, 'r') as f:
                     content = f.read()
                 replace_str = 'julia.bin "$@"'
-                if '--cpu-target' not in content and replace_str in content:
+                if '--cpu-target' in content:
+                    print_warning(
+                        f"Julia wrapper at {wrapper_path} already contains --cpu-target option, skipping modification. "
+                        f"Current content: {content}"
+                    )
+                elif replace_str not in content:
+                    raise EasyBuildError(f"Unexpected content in Julia wrapper at {wrapper_path}, cannot modify to add --cpu-target option.")
+                else:
                     content = content.replace(replace_str, f'julia.bin --cpu-target={julia_target} "$@"')
                     # Ensure file is writable and restore original permissions after writing
                     original_permissions = os.stat(wrapper_path).st_mode
@@ -2342,12 +2349,13 @@ def post_proc_julia(self, *args, **kwargs):
                         f.write(content)
                     os.chmod(wrapper_path, original_permissions)
                     print_msg(f"Added --cpu-target={julia_target} to Julia wrapper at {wrapper_path}")
-                else:
-                    print_warning(f"Julia wrapper at {wrapper_path} already contains --cpu-target option or unexpected content, skipping modification.")
             else:
-                print_warning(f"Julia wrapper not found at {wrapper_path}, cannot set CPU target.")
+                raise EasyBuildError(f"Julia wrapper not found at {wrapper_path}, cannot set CPU target.")
         else:
-            print_warning(f"No Julia CPU target mapping found for EESSI CPU target '{cpu_target}', skipping --cpu-target modification.")
+            raise EasyBuildError(
+                f"No Julia CPU target mapping found for EESSI CPU target '{cpu_target}'. "
+                "Please update the cpu_to_target_map in the `post_proc_julia` hook to include this mapping."
+            )
     else:
         raise EasyBuildError("Julia-specific post-processing hook triggered for non-Julia easyconfig?!")
 
