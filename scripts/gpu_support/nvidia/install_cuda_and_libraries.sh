@@ -218,6 +218,7 @@ for EASYSTACK_FILE in ${NVIDIA_EASYSTACKS_DIRECTORY}/eessi-*CUDA*.yml; do
 
     if [[ $number_of_packages -eq 0 ]]; then
         echo_green "All packages from ${EASYSTACK_FILE} already installed"
+        PROCESSED_EASYSTACK_FILES+=("${EASYSTACK_FILE}")
     else
         echo "number of packages to be (re-)installed: '${number_of_packages}'"
         base_storage_space=$((5000000 + ${number_of_packages} * 3000000))
