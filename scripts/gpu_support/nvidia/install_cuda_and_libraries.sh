@@ -192,8 +192,10 @@ for EASYSTACK_FILE in ${NVIDIA_EASYSTACKS_DIRECTORY}/eessi-*CUDA*.yml; do
 
     # Make sure the CUDA EULA is accepted if it shall be installed
     if [ "${cuda_install_needed}" -eq 1 ] && [ "${cuda_eula_accepted}" -ne 1 ]; then
-      error="\nCUDA shall be installed. However, the CUDA EULA has not been accepted\nYou _must_ accept the CUDA EULA via the '--accept-cuda-eula' command line option to $0.\n"
-      fatal_error "${error}"
+      error="CUDA shall be installed. However, the CUDA EULA has not been accepted\n"
+      error+=You _must_ accept the CUDA EULA via the '--accept-cuda-eula' command line option to $0.\n"
+      error+="See the EULA at https://docs.nvidia.com/cuda/eula/index.html"
+      fatal_error "\n${error}\n"
     fi
 
     # Check if cdDNN shall be installed
@@ -206,8 +208,10 @@ for EASYSTACK_FILE in ${NVIDIA_EASYSTACKS_DIRECTORY}/eessi-*CUDA*.yml; do
 
     # Make sure the cuDNN EULA is accepted if it shall be installed
     if [ "${cudnn_install_needed}" -eq 1 ] && [ "${cudnn_eula_accepted}" -ne 1 ]; then
-      error="\ncuDNN shall be installed. However, the cuDNN EULA has not been accepted\nYou _must_ accept the cuDNN EULA via the '--accept-cudnn-eula' command line option to $0.\n"
-      fatal_error "${error}"
+      error="cuDNN shall be installed. However, the cuDNN EULA has not been accepted\n"
+      error+="You _must_ accept the cuDNN EULA via the '--accept-cudnn-eula' command line option to $0.\n"
+      error+="See the EULA at https://docs.nvidia.com/deeplearning/cudnn/latest/reference/eula.html"
+      fatal_error "\n${error}\n"
     fi
 
     # determine the number of packages to be installed (assume 5 GB + num_packages *
