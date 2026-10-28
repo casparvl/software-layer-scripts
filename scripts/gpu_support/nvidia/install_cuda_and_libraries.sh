@@ -196,7 +196,7 @@ for EASYSTACK_FILE in ${NVIDIA_EASYSTACKS_DIRECTORY}/eessi-*CUDA*.yml; do
     # Make sure the CUDA EULA is accepted if it shall be installed
     if [ "${cuda_install_needed}" -eq 1 ] && [ "${cuda_eula_accepted}" -ne 1 ]; then
       error="CUDA shall be installed. However, the CUDA EULA has not been accepted\n"
-      error+=You _must_ accept the CUDA EULA via the '--accept-cuda-eula' command line option to $0.\n"
+      error+="You _must_ accept the CUDA EULA via the '--accept-cuda-eula' command line option to $0.\n"
       error+="See the EULA at $EULA_URL_CUDA"
       fatal_error "\n${error}\n"
     fi
