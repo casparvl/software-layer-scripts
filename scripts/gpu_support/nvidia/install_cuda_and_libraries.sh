@@ -19,6 +19,9 @@
 TOPDIR=$(dirname $(realpath $BASH_SOURCE))
 source "$TOPDIR"/../../utils.sh
 
+EULA_URL_CUDA="https://docs.nvidia.com/cuda/eula/index.html"
+EULA_URL_CUDNN="https://docs.nvidia.com/deeplearning/cudnn/latest/reference/eula.html"
+
 # Function to display help message
 show_help() {
     echo "Usage: $0 [OPTIONS]"
@@ -26,10 +29,10 @@ show_help() {
     echo "  --help                           Display this help message"
     echo "  --accept-cuda-eula               You _must_ accept the CUDA EULA to install"
     echo "                                   CUDA, see the EULA at"
-    echo "                                   https://docs.nvidia.com/cuda/eula/index.html"
+    echo "                                   $EULA_URL_CUDA"
     echo "  --accept-cudnn-eula              You _must_ accept the cuDNN EULA to install"
     echo "                                   cuDNN, see the EULA at"
-    echo "                                   https://docs.nvidia.com/deeplearning/cudnn/latest/reference/eula.html"
+    echo "                                   $EULA_URL_CUDNN"
     echo "  -t, --temp-dir /path/to/tmpdir   Specify a location to use for temporary"
     echo "                                   storage during the installation of CUDA"
     echo "                                   and/or other libraries (must have"
@@ -194,7 +197,7 @@ for EASYSTACK_FILE in ${NVIDIA_EASYSTACKS_DIRECTORY}/eessi-*CUDA*.yml; do
     if [ "${cuda_install_needed}" -eq 1 ] && [ "${cuda_eula_accepted}" -ne 1 ]; then
       error="CUDA shall be installed. However, the CUDA EULA has not been accepted\n"
       error+=You _must_ accept the CUDA EULA via the '--accept-cuda-eula' command line option to $0.\n"
-      error+="See the EULA at https://docs.nvidia.com/cuda/eula/index.html"
+      error+="See the EULA at $EULA_URL_CUDA"
       fatal_error "\n${error}\n"
     fi
 
@@ -210,7 +213,7 @@ for EASYSTACK_FILE in ${NVIDIA_EASYSTACKS_DIRECTORY}/eessi-*CUDA*.yml; do
     if [ "${cudnn_install_needed}" -eq 1 ] && [ "${cudnn_eula_accepted}" -ne 1 ]; then
       error="cuDNN shall be installed. However, the cuDNN EULA has not been accepted\n"
       error+="You _must_ accept the cuDNN EULA via the '--accept-cudnn-eula' command line option to $0.\n"
-      error+="See the EULA at https://docs.nvidia.com/deeplearning/cudnn/latest/reference/eula.html"
+      error+="See the EULA at $EULA_URL_CUDNN"
       fatal_error "\n${error}\n"
     fi
 
