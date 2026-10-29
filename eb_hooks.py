@@ -2134,9 +2134,12 @@ def pre_single_extension_orjson(ext, *args, **kwargs):
     if ext.name == 'orjson':
         # Disable UTC zoneinfo UTC test, as the behavior can be dependent on how 
         # `localinfo`s are configured on the system
-        runtest = ext.cfg.get('runtest', '')
-        if 'pytest' in runtest:
-            ext.cfg['runtest'] = runtest + ' -k "not test_datetime_zoneinfo_utc"'
+        cpu_target = get_eessi_envvar('EESSI_SOFTWARE_SUBDIR')
+        # Make this specific to a64fx, since the problem was observed only there
+        if cpu_target == CPU_TARGET_A64FX:
+            runtest = ext.cfg.get('runtest', '')
+            if 'pytest' in runtest:
+                ext.cfg['runtest'] = runtest + ' -k "not test_datetime_zoneinfo_utc"'
 
 
 def pre_single_extension_hf_xet(ext, *args, **kwargs):
