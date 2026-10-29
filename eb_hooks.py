@@ -6,6 +6,9 @@ import glob
 import json
 import os
 import re
+import socket
+import stat
+import tarfile
 from typing import NamedTuple
 
 import easybuild.tools.environment as env
@@ -33,15 +36,24 @@ except ImportError:
     from distutils.version import LooseVersion
 
 
+# AARCH64 targets
 CPU_TARGET_NEOVERSE_N1 = 'aarch64/neoverse_n1'
 CPU_TARGET_NEOVERSE_V1 = 'aarch64/neoverse_v1'
 CPU_TARGET_AARCH64_GENERIC = 'aarch64/generic'
 CPU_TARGET_A64FX = 'aarch64/a64fx'
 CPU_TARGET_NVIDIA_GRACE = 'aarch64/nvidia/grace'
+CPU_TARGET_AWS_GRAVITON4 = 'aarch64/aws/graviton4'
 
+# X86_64 targets
+CPU_TARGET_X86_64_GENERIC = 'x86_64/generic'
+CPU_TARGET_HASWELL = 'x86_64/intel/haswell'
 CPU_TARGET_CASCADELAKE = 'x86_64/intel/cascadelake'
 CPU_TARGET_ICELAKE = 'x86_64/intel/icelake'
 CPU_TARGET_SAPPHIRE_RAPIDS = 'x86_64/intel/sapphirerapids'
+CPU_TARGET_SKYLAKE_AVX512 = 'x86_64/intel/skylake_avx512'
+CPU_TARGET_GRANITE_RAPIDS = 'x86_64/intel/graniterapids'
+CPU_TARGET_ZEN2 = 'x86_64/amd/zen2'
+CPU_TARGET_ZEN3 = 'x86_64/amd/zen3'
 CPU_TARGET_ZEN4 = 'x86_64/amd/zen4'
 CPU_TARGET_ZEN5 = 'x86_64/amd/zen5'
 
@@ -273,6 +285,15 @@ def get_rpath_override_dirs(software_name=None, stub_suffix=""):
     rpath_injection_dirs = [os.path.join(rpath_injection_stub, x) for x in ('lib', 'lib64')]
 
     return rpath_injection_dirs
+
+
+def is_ipv6_available():
+    try:
+        with socket.socket(socket.AF_INET6, socket.SOCK_DGRAM) as sock:
+            sock.bind(("::1", 0))
+        return True
+    except OSError:
+        return False
 
 
 def parse_hook(ec, *args, **kwargs):
@@ -603,7 +624,7 @@ def parse_hook_fontconfig_add_fonts(ec, eprefix):
 def parse_hook_grpcio_zlib(ec, ecprefix):
     """Adjust preinstallopts to use ZLIB from compat layer."""
     if ec.name == 'grpcio':
-        target_list = ['1.57.0', '1.67.1', '1.70.0']
+        target_list = ['1.57.0', '1.67.1', '1.70.0', '1.76.0', '1.81.0']
         if ec.version in target_list:
             exts_list = ec['exts_list']
             original_preinstallopts = (exts_list[0][2])['preinstallopts']
@@ -688,7 +709,10 @@ def parse_hook_qt6_libinput(ec, eprefix):
     Add dependency on libinput to Qt6.
     This is not included in upstream EasyBuild as it brings a dependency on system-d
     """
-    qt6_toolchain_version_to_libinput_version_map = {'14.3.0': '1.30.1'}
+    qt6_toolchain_version_to_libinput_version_map = {
+        '14.3.0': '1.30.1',
+        '15.2.0': '1.31.3',
+    }
     if ec.name == 'Qt6':
         # Only enforcing from GCCcore 14.3.0 onwards for Qt6 6.9.3 onwards
         if ec.toolchain.version >= LooseVersion('14.3.0'):
@@ -1059,8 +1083,8 @@ def pre_prepare_hook_cudnn(self, *args, **kwargs):
     """
 
     if self.name == 'cuDNN':
-        # cuDNN 9.5.0.50 doesn't have support for 9.0a in all binaries
-        if self.version == "9.5.0.50":
+        # cuDNN 8.9.2.26 and 9.5.0.50 don't have support for 9.0a in all binaries
+        if self.version in ('8.9.2.26', '9.5.0.50'):
             cuda_cc = build_option('cuda_compute_capabilities')
             if cuda_cc and '9.0a' in cuda_cc:
                 updated_cuda_cc = [v.replace('9.0a', '9.0') for v in cuda_cc]
@@ -1097,6 +1121,20 @@ def pre_prepare_hook_highway_handle_test_compilation_issues(self, *args, **kwarg
                 update_build_option('optarch', OPTARCH_GENERIC)
     else:
         raise EasyBuildError("Highway-specific hook triggered for non-Highway easyconfig?!")
+
+
+def post_prepare_hook_AITW_olb_permeability(self, *args, **kwargs):
+    """
+    Post-prepare hook for AITW-olb_permeability
+    This is not run as a pre-configure hook since the configure step is skipped and the hook would be skipped as well.
+    - Ensure the `CPU_SIMD` flag is not set when building on x86_64 with generic optimization
+    """
+    if self.name == 'AITW-olb_permeability':
+        optarch = build_option('optarch')
+        cpu_target = get_eessi_envvar('EESSI_SOFTWARE_SUBDIR')
+        if optarch == OPTARCH_GENERIC:
+            if cpu_target == CPU_TARGET_X86_64_GENERIC:
+                self.cfg.update('buildopts', 'PLATFORMS="CPU_SISD"')
 
 
 def post_prepare_hook_highway_handle_test_compilation_issues(self, *args, **kwargs):
@@ -1168,6 +1206,75 @@ def pre_prepare_hook_LAMMPS_kokkos_CUDA_families(self, *args, **kwargs):
                     updated_cuda_cc = [v.replace('12.0f', '12.0') for v in cuda_cc]
                     update_build_option('cuda_compute_capabilities', updated_cuda_cc)
 
+    
+def pre_prepare_hook_uv_source_date_epoch(self, *args, **kwargs):
+    """
+    Set SOURCE_DATE_EPOCH for uv based on the timestamp recorded in the
+    upstream source archive.
+
+    maturin uses SOURCE_DATE_EPOCH when setting timestamps on wheel entries.
+    Using a timestamp derived from the source archive makes this deterministic
+    across builds. This value is missing in A64FX builds so we need to handle
+    it explicilty here when building uv.
+    """
+    if self.name != 'uv':
+        raise EasyBuildError(
+            "uv-specific hook triggered for non-uv easyconfig?!"
+        )
+    
+
+    if self.version == "0.10.9":
+        cpu_target = get_eessi_envvar('EESSI_SOFTWARE_SUBDIR')
+        if cpu_target == CPU_TARGET_A64FX:
+            cpu_target = get_eessi_envvar('EESSI_SOFTWARE_SUBDIR')
+            source_name = f"{self.name}-{self.version}.tar.gz"
+        
+            sources = [
+                src for src in self.src
+                if src['name'] == source_name
+            ]
+        
+            if len(sources) != 1:
+                raise EasyBuildError(
+                    "Expected exactly one source archive named %s, found %d",
+                    source_name,
+                    len(sources),
+                )
+        
+            source_path = sources[0]['path']
+        
+            try:
+                with tarfile.open(source_path, 'r:*') as archive:
+                    mtimes = [
+                        member.mtime
+                        for member in archive.getmembers()
+                        if member.isfile()
+                    ]
+            except (OSError, tarfile.TarError) as err:
+                raise EasyBuildError(
+                    "Failed to determine SOURCE_DATE_EPOCH from %s: %s",
+                    source_path,
+                    err,
+                )
+        
+            if not mtimes:
+                raise EasyBuildError(
+                    "Could not determine SOURCE_DATE_EPOCH: "
+                    "no files found in source archive %s",
+                    source_path,
+                )
+        
+            source_date_epoch = str(max(mtimes))
+        
+            env.setvar('SOURCE_DATE_EPOCH', source_date_epoch)
+        
+            print_msg(
+                "Set SOURCE_DATE_EPOCH=%s for %s %s based on source archive %s",
+                source_date_epoch,
+                self.name,
+                self.version,
+                source_name,
+            )
 
 def post_prepare_hook_llvm_a64fx(self, *args, **kwargs):
     """
@@ -1188,7 +1295,6 @@ def pre_configure_hook(self, *args, **kwargs):
     # (solves "expected initializer before 'OF'" errors)
     if self.name in ['FreeXL', 'libspatialite', 'VSEARCH']:
         self.cfg.update('configopts', 'CPPFLAGS="-DOF=_Z_OF ${CPPFLAGS}"')
-
 
 def pre_configure_hook_BLIS(self, *args, **kwargs):
     """
@@ -1533,7 +1639,8 @@ def pre_configure_hook_petsc(self, *args, **kwargs):
     if self.name == 'PETSc':
         # only necessary for PETSc 3.24.0+
         if LooseVersion(self.version) >= LooseVersion('3.24.0'):
-            self.cfg.update('configopts', '--with-zlib-dir=${EESSI_EPREFIX}/usr')
+            compat_layer_topdir = get_eessi_envvar('EESSI_EPREFIX')
+            self.cfg.update('configopts', f'--with-zlib-dir={compat_layer_topdir}/usr')
     else:
         raise EasyBuildError("PETSc-specific hook triggered for non-PETSc easyconfig?!")
 
@@ -1669,6 +1776,29 @@ def pre_configure_hook_cmake_system(self, *args, **kwargs):
         raise EasyBuildError("CMake-specific hook triggered for non-CMake easyconfig?!")
 
 
+def pre_configure_hook_visit(self, *args, **kwargs):
+    """
+    Pre-configure hook for Visit
+    - make sure that zlib is found in compat layer
+    """
+    if self.name == 'Visit':
+        if 'zlib' in build_option('filter_deps'):
+            compat_layer_topdir = get_eessi_envvar('EESSI_EPREFIX')
+            zlib_dir = os.path.join(compat_layer_topdir, 'usr')
+            zlib_opt = f'-DVISIT_ZLIB_DIR={zlib_dir}'
+
+            if '-DVISIT_ZLIB_DIR' in self.cfg['configopts']:
+                self.cfg['configopts'] = re.sub(
+                    r'-DVISIT_ZLIB_DIR=\S*',
+                    zlib_opt,
+                    self.cfg['configopts'],
+                )
+            else:
+                self.cfg.update('configopts', zlib_opt)
+    else:
+        raise EasyBuildError("Visit-specific hook triggered for non-Visit easyconfig?!")
+
+
 def pre_configure_hook_Zoltan(self, *args, **kwargs):
     """
     Pre-configure hook for Zoltan to filter out ParMETIS configure options,
@@ -1707,6 +1837,41 @@ def pre_test_hook_exclude_failing_test_Highway(self, *args, **kwargs):
         self.cfg['runtest'] += ' ARGS="-E TestAllShiftRightLanes/SVE_256"'
     if self.name == 'Highway' and self.version in ['1.0.3'] and cpu_target == CPU_TARGET_NVIDIA_GRACE:
         self.cfg['runtest'] += ' ARGS="-E TestAllSumOfLanes"'
+
+
+def pre_test_hook_c_ares(self, *args, **kwargs):
+    """
+    Pre-test hook for c-ares: disable IPv6 tests on systems that have IPv6 disabled
+    """
+    if self.name == 'c-ares':
+        # Check if the tests are enabled (older versions don't run them) and if IPv6 is available
+        if self.cfg['test_cmd'] and not is_ipv6_available():
+            ipv6_tests_filter = '*ipv6*'
+            print_msg(f"No IPv6 functionality on this system, disabling all IPv6 tests by filtering {ipv6_tests_filter} with --gtest_filter.")
+            # Depending on the version/easyconfig, we have to be careful and check how to set/override runtest
+            if self.cfg.get('runtest'):
+                if '--gtest_filter=' in self.cfg['runtest']:
+                    # Append ipv6 tests to the list of tests to be filtered (i.e. the negative patterns starting with a minus) with --gtest_filter
+                    # The value of --gtest_filter looks like:
+                    # PositivePattern1:PositivePattern2-NegativePattern1:NegativePattern2
+                    self.cfg['runtest'] = re.sub(
+                        r'(--gtest_filter=")([^\s"]*)(")',
+                        lambda m: (
+                            m.group(1) +
+                            (m.group(2) + ':' if '-' in m.group(2) else m.group(2) + '-') +
+                            ipv6_tests_filter +
+                            m.group(3)
+                        ),
+                        self.cfg['runtest']
+                    )
+                else:
+                    # There was a runtest parameter defined, but without a --gtest_filter option: append it
+                    self.cfg['runtest'] += f' --gtest_filter="-{ipv6_tests_filter}"'
+            else:
+                # No runtest defined at all: simply set it to filter the IPv6 tests
+                self.cfg['runtest'] = f'--gtest_filter="-{ipv6_tests_filter}"'
+    else:
+        raise EasyBuildError("c-ares-specific hook triggered for non-c-ares easyconfig?!")
 
 
 def pre_test_hook_gromacs(self, *args, **kwargs):
@@ -1962,6 +2127,21 @@ def pre_single_extension_numpy(ext, *args, **kwargs):
             update_build_option('optarch', 'march=armv8.2-a')
 
 
+def pre_single_extension_orjson(ext, *args, **kwargs):
+    """
+    Disable test prone to failing due to solar/legal timezone behavior in Etc/UTC on eessi container on Deucalion.
+    """
+    if ext.name == 'orjson':
+        # Disable UTC zoneinfo UTC test, as the behavior can be dependent on how 
+        # `localinfo`s are configured on the system
+        cpu_target = get_eessi_envvar('EESSI_SOFTWARE_SUBDIR')
+        # Make this specific to a64fx, since the problem was observed only there
+        if cpu_target == CPU_TARGET_A64FX:
+            runtest = ext.cfg.get('runtest', '')
+            if 'pytest' in runtest:
+                ext.cfg['runtest'] = runtest + ' -k "not test_datetime_zoneinfo_utc"'
+
+
 def pre_single_extension_hf_xet(ext, *args, **kwargs):
     """
     Pre-single-extension hook for hf_xet (extension of huggingface-hub) on aarch64/generic:
@@ -2114,6 +2294,85 @@ def post_postproc_cudnn(self, *args, **kwargs):
             print_msg(f"EESSI hook to respect cuDDN license not triggered for installation path {self.installdir}")
     else:
         raise EasyBuildError("cuDNN-specific hook triggered for non-cuDNN easyconfig?!")
+
+
+def post_proc_julia(self, *args, **kwargs):
+    """
+    Post-processing hook for Julia: add the `--cpu-target` option to the `julia` wrappers in order to ensure the
+    correct CPU target is used when running Julia, and to avoid issues with Julia's autodetection of the CPU target.
+    """
+    if self.name == 'Julia':
+        version = LooseVersion(self.version)
+
+        cpu_to_target_map = {}
+        if version >= '1.12':
+            cpu_to_target_map = {
+                **cpu_to_target_map,
+                # x86_64 targets
+                CPU_TARGET_X86_64_GENERIC: 'x86-64',
+                CPU_TARGET_HASWELL: 'haswell',
+                CPU_TARGET_CASCADELAKE: 'cascadelake',
+                CPU_TARGET_ICELAKE: 'icelake-client',
+                CPU_TARGET_SAPPHIRE_RAPIDS: 'sapphirerapids',
+                CPU_TARGET_SKYLAKE_AVX512: 'skylake-avx512',
+                CPU_TARGET_GRANITE_RAPIDS: 'graniterapids',
+                CPU_TARGET_ZEN2: 'znver2',
+                CPU_TARGET_ZEN3: 'znver3',
+                CPU_TARGET_ZEN4: 'znver4',
+                CPU_TARGET_ZEN5: 'znver4',  # Proper znver5 only available in Julia 1.13 and later, handled below
+
+                # ARM targets
+                CPU_TARGET_AARCH64_GENERIC: 'generic',
+                CPU_TARGET_NEOVERSE_N1: 'neoverse-n1',
+                CPU_TARGET_NEOVERSE_V1: 'neoverse-v1',
+                CPU_TARGET_A64FX: 'a64fx',
+                CPU_TARGET_NVIDIA_GRACE: 'neoverse-v2',
+                CPU_TARGET_AWS_GRAVITON4: 'neoverse-v2',
+            }
+        if version >= '1.13':
+            cpu_to_target_map = {
+                **cpu_to_target_map,
+                CPU_TARGET_ZEN5: 'znver5',
+            }
+
+        if not cpu_to_target_map:
+            print_warning(f"No CPU target mapping defined for Julia version {version}, skipping --cpu-target modification.")
+            return
+
+        cpu_target = get_eessi_envvar('EESSI_SOFTWARE_SUBDIR')
+        julia_target = cpu_to_target_map.get(cpu_target, None)
+        if julia_target:
+            wrapper_path = os.path.join(self.installdir, 'bin', 'julia')
+            if os.path.isfile(wrapper_path):
+                # Add the --cpu-target option to the Julia wrapper script
+                with open(wrapper_path, 'r') as f:
+                    content = f.read()
+                replace_str = 'julia.bin "$@"'
+                if '--cpu-target' in content:
+                    print_warning(
+                        f"Julia wrapper at {wrapper_path} already contains --cpu-target option, skipping modification. "
+                        f"Current content: {content}"
+                    )
+                elif replace_str not in content:
+                    raise EasyBuildError(f"Unexpected content in Julia wrapper at {wrapper_path}, cannot modify to add --cpu-target option.")
+                else:
+                    content = content.replace(replace_str, f'julia.bin --cpu-target={julia_target} "$@"')
+                    # Ensure file is writable and restore original permissions after writing
+                    original_permissions = os.stat(wrapper_path).st_mode
+                    os.chmod(wrapper_path, original_permissions | stat.S_IWUSR)
+                    with open(wrapper_path, 'w') as f:
+                        f.write(content)
+                    os.chmod(wrapper_path, original_permissions)
+                    print_msg(f"Added --cpu-target={julia_target} to Julia wrapper at {wrapper_path}")
+            else:
+                raise EasyBuildError(f"Julia wrapper not found at {wrapper_path}, cannot set CPU target.")
+        else:
+            raise EasyBuildError(
+                f"No Julia CPU target mapping found for EESSI CPU target '{cpu_target}'. "
+                "Please update the cpu_to_target_map in the `post_proc_julia` hook to include this mapping."
+            )
+    else:
+        raise EasyBuildError("Julia-specific post-processing hook triggered for non-Julia easyconfig?!")
 
 
 def replace_binary_non_distributable_files_with_symlinks(log, install_dir, pkg_name, allowlist):
@@ -2382,6 +2641,7 @@ PRE_PREPARE_HOOKS = {
     'LLVM': pre_prepare_hook_llvm_a64fx,
     'PyTorch': pre_prepare_hook_pytorch,
     'Rust': pre_prepare_hook_llvm_a64fx,
+    'uv': pre_prepare_hook_uv_source_date_epoch,
 }
 
 POST_PREPARE_HOOKS = {
@@ -2389,6 +2649,7 @@ POST_PREPARE_HOOKS = {
     'Highway': post_prepare_hook_highway_handle_test_compilation_issues,
     'LLVM': post_prepare_hook_llvm_a64fx,
     'Rust': post_prepare_hook_llvm_a64fx,
+    'AITW-olb_permeability': post_prepare_hook_AITW_olb_permeability,
 }
 
 PRE_CONFIGURE_HOOKS = {
@@ -2412,11 +2673,13 @@ PRE_CONFIGURE_HOOKS = {
     'ROCm-LLVM': pre_configure_hook_llvm,
     'Score-P': pre_configure_hook_score_p,
     'SymEngine': pre_configure_hook_symengine,
+    'Visit': pre_configure_hook_visit,
     'WRF': pre_configure_hook_wrf_aarch64,
     'Zoltan': pre_configure_hook_Zoltan,
 }
 
 PRE_TEST_HOOKS = {
+    'c-ares': pre_test_hook_c_ares,
     'ESPResSo': pre_test_hook_ignore_failing_tests_ESPResSo,
     'FFTW.MPI': pre_test_hook_ignore_failing_tests_FFTWMPI,
     'GROMACS': pre_test_hook_gromacs,
@@ -2433,6 +2696,7 @@ PRE_TEST_HOOKS = {
 PRE_SINGLE_EXTENSION_HOOKS = {
     'isoband': pre_single_extension_isoband,
     'numpy': pre_single_extension_numpy,
+    'orjson': pre_single_extension_orjson,
     'testthat': pre_single_extension_testthat,
     'hf_xet': pre_single_extension_hf_xet,
     'hf-xet': pre_single_extension_hf_xet,
@@ -2445,6 +2709,7 @@ POST_SINGLE_EXTENSION_HOOKS = {
 POST_POSTPROC_HOOKS = {
     'CUDA': post_postproc_cuda,
     'cuDNN': post_postproc_cudnn,
+    'Julia': post_proc_julia,
 }
 
 PRE_MODULE_HOOKS = {}
@@ -2474,6 +2739,9 @@ PARALLELISM_LIMITS = {
     # Deucalion has 32GB HBM for 48 cores per node
     CPU_TARGET_A64FX: (divide_by_factor, 4),
     # software-specific limits
+    'hipBLASLt': {
+        '*': (set_maximum, 8),
+    },
     'libxc': {
         '*': (divide_by_factor, 2),
         CPU_TARGET_A64FX: (set_maximum, 6),
@@ -2493,6 +2761,9 @@ PARALLELISM_LIMITS = {
     'QuantumESPRESSO': {
         CPU_TARGET_A64FX: (set_maximum, 6),
     },
+    'rocBLAS': {
+        '*': (set_maximum, 8),
+    },
     'TensorFlow': {
         '*': (divide_by_factor, 2),
         CPU_TARGET_A64FX: (set_maximum, 8),
@@ -2502,9 +2773,7 @@ PARALLELISM_LIMITS = {
     },
     'Qt6': {
         CPU_TARGET_A64FX: (set_maximum, 8),
-        CPU_TARGET_AARCH64_GENERIC: (divide_by_factor, 2),
-        CPU_TARGET_NEOVERSE_N1: (divide_by_factor, 2),
-        CPU_TARGET_NEOVERSE_V1: (divide_by_factor, 2),
+        '*': (divide_by_factor, 2),
     },
     'ROCm-LLVM': {
         '*': (set_maximum, 12),
